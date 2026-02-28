@@ -1,0 +1,14 @@
+---
+description: Debugging workflow and reference index
+alwaysApply: true
+---
+
+# Debug workflow
+
+When the user reports a bug or asks for debugging help:
+
+- First consult `.cursor/debug-reference.md` for symptom → likely cause → where-to-look mapping.
+- Check `.cursor/debug-journal.md` for past incidents and fixes; add a new session entry if this is a new incident.
+- Prefer **runtime evidence** (logs, repro steps, minimal instrumentation). Do not guess fixes without evidence.
+- After the issue is confirmed fixed, remove temporary instrumentation and update the journal with final outcome.
+- **At the end of every debugging session**, update `.cursor/debug-reference.md` if new useful information surfaced (new symptoms, causes, where-to-look paths, or quick checks) that is not already in the reference. The reference should grow over time as the project grows.

@@ -1,0 +1,32 @@
+ Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env
+.env.*
+
+# Build artifacts
+build/
+dist/
+
+# PyInstaller
+*.spec
+*.toc
+*.pyz
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

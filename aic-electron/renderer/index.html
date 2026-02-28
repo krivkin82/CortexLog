@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AIC MVP</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>AIC MVP</h1>
+      <div class="header-right">
+        <button type="button" id="btn-knowledge-map" class="panel-toggle">Knowledge Map</button>
+        <button type="button" id="btn-proposed-insights" class="panel-toggle">Proposed Insights</button>
+        <span class="status">
+          Backend: <span id="backend-status">checking...</span>
+          &nbsp;|&nbsp;
+          <span id="llm-status-wrap" title="">LLM: <span id="llm-status">checking...</span></span>
+        </span>
+      </div>
+    </header>
+    <div id="session-nudge" class="session-nudge hidden">
+      You've been here a while. Consider taking a short break or doing something offline.
+    </div>
+
+    <main class="app-main resizable-layout" id="app-main">
+      <div class="resize-col" id="col-left">
+        <section class="card pane-content" id="pane-journal">
+          <h2>Journal</h2>
+          <ul id="journal-list" class="scroll-list"></ul>
+          <div class="journal-input-strip">
+            <div class="journal-actions">
+              <button id="journal-save">Save Entry</button>
+              <button id="journal-reflect">Reflect on this</button>
+            </div>
+            <div class="textarea-resize-wrap" id="journal-textarea-wrap">
+              <div class="textarea-resize-handle" id="journal-resize-handle" title="Drag to resize"></div>
+              <textarea id="journal-input" rows="5" placeholder="Write a journal entry..."></textarea>
+            </div>
+          </div>
+        </section>
+        <div class="splitter splitter-row" data-before="pane-journal" data-after="pane-chat"></div>
+        <section class="card pane-content" id="pane-chat">
+          <h2>Chat</h2>
+          <div id="chat-log" class="chat-log"></div>
+          <div id="chat-citations" class="chat-citations"></div>
+          <div class="chat-input-strip">
+            <button id="chat-send">Send</button>
+            <div class="textarea-resize-wrap" id="chat-textarea-wrap">
+              <div class="textarea-resize-handle" id="chat-resize-handle" title="Drag to resize"></div>
+              <textarea id="chat-input" rows="3" placeholder="Say something..."></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div class="splitter splitter-col" data-before="col-left" data-after="col-mid"></div>
+      <div class="resize-col" id="col-mid">
+        <section class="card pane-content" id="pane-knowledge">
+          <h2>Knowledge Map</h2>
+          <div class="knowledge-actions">
+            <button id="refresh-knowledge">Refresh</button>
+          </div>
+          <div class="knowledge-section">
+            <h3>Entities</h3>
+            <div id="entities-list" class="scroll-list"></div>
+          </div>
+          <div class="knowledge-section">
+            <h3>Relations</h3>
+            <div id="relations-list" class="scroll-list"></div>
+          </div>
+          <div class="knowledge-section">
+            <h3>Conflicts</h3>
+            <div id="conflicts-list" class="scroll-list"></div>
+          </div>
+          <div class="knowledge-section">
+            <h3>Selected</h3>
+            <div id="knowledge-detail">Select an entity to view details.</div>
+          </div>
+        </section>
+      </div>
+      <div class="splitter splitter-col" data-before="col-mid" data-after="col-right"></div>
+      <div class="resize-col" id="col-right">
+        <section class="card pane-content" id="pane-insights">
+          <h2>Proposed Insights</h2>
+          <div class="insight-toolbar">
+            <button id="open-filtered">Filtered</button>
+            <span id="filtered-count" class="filtered-count"></span>
+          </div>
+          <div id="insights-list" class="insights-list scroll-list"></div>
+        </section>
+        <div class="splitter splitter-row" data-before="pane-insights" data-after="pane-settings"></div>
+        <section class="card pane-content" id="pane-settings">
+          <button id="settings-toggle" class="accordion-toggle">Settings</button>
+          <div id="settings-body" class="accordion-body hidden">
+            <div class="settings-section">
+              <label>
+                <input type="checkbox" id="toggle-local" checked />
+                Enable Local Ingestion
+              </label>
+              <button id="add-folder">Add Folder</button>
+              <div id="folders-list"></div>
+              <button id="run-local-ingest">Run Local Ingest</button>
+              <div id="ingest-progress" class="ingest-progress"></div>
+            </div>
+
+            <div class="settings-section">
+              <label>
+                <input type="checkbox" id="toggle-gmail" />
+                Enable Gmail
+              </label>
+              <input type="text" id="gmail-token" placeholder="Gmail access token" />
+            </div>
+
+            <div class="settings-section">
+              <label>
+                <input type="checkbox" id="toggle-facebook" />
+                Enable Facebook Export
+              </label>
+              <div class="path-row">
+                <input type="text" id="facebook-path" placeholder="Facebook export file or folder" />
+                <button id="pick-facebook">Pick</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <label>
+                <input type="checkbox" id="toggle-youtube" />
+                Enable YouTube Export
+              </label>
+              <div class="path-row">
+                <input type="text" id="youtube-path" placeholder="YouTube export folder" />
+                <button id="pick-youtube">Pick</button>
+              </div>
+            </div>
+
+            <button id="save-settings">Save Settings</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="./renderer.js"></script>
+    <!-- marked and DOMPurify loaded above for chat rich-text -->
+  </body>
+</html>

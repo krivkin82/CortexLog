@@ -1,0 +1,29 @@
+{
+  "name": "aic-electron",
+  "version": "0.1.0",
+  "main": "main.js",
+  "description": "AIC MVP Electron shell",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.aic.mvp",
+    "files": [
+      "**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../aic-backend/dist/aic-backend.exe",
+        "to": "backend/aic-backend.exe"
+      }
+    ]
+  }
+}
