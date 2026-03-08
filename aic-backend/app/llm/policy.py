@@ -23,11 +23,25 @@ def detect_distress(text: str) -> bool:
     return any(keyword in lowered for keyword in DISTRESS_KEYWORDS)
 
 
+WORKPLACE_ROUTING_KEYWORDS = [
+    "workplace", "work", "boss", "manager", "coworker", "colleague", "employer",
+    "career", "job", "promotion", "lateral move", "resign", "quit", "fired",
+    "conflict", "confrontation", "disagreement", "tension", "defensive", "cya",
+    "reputation", "reputation_fear", "hr", "meeting", "performance review",
+]
+
+
+def is_workplace_prompt(content: str) -> bool:
+    """Detect workplace/career/conflict/reputation-fear prompts for advisor_workplace routing."""
+    lowered = content.lower()
+    return any(kw in lowered for kw in WORKPLACE_ROUTING_KEYWORDS)
+
+
 def normalize_mode(mode: str | None) -> str:
     if not mode:
         return "journal"
     mode = mode.lower()
-    if mode in {"journal", "coach", "exploration", "crisis"}:
+    if mode in {"journal", "coach", "exploration", "crisis", "advisor_workplace"}:
         return mode
     return "journal"
 

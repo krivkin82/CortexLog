@@ -1,0 +1,258 @@
+{
+  "summary": {
+    "generated_at": "2026-03-08T01:01:52.644428Z",
+    "total_cases": 10,
+    "total_checks": 33,
+    "total_passed": 19,
+    "total_failed": 14,
+    "overall_pass_rate": 0.576
+  },
+  "results": [
+    {
+      "id": "workplace_gemini_prompt_concern_01",
+      "title": "Worried internal Gemini prompt may be seen by employer",
+      "mode_expected": "advisor_workplace",
+      "tags": [
+        "workplace",
+        "career",
+        "reputation_fear",
+        "journal"
+      ],
+      "input_preview": "2/28/26, 12:09 AM I input a prompt into Gemini that I'd like to be able to delete. I was upset with my senior co-worker and my boss and I input a prompt that showed that I was upset. Nothing too crazy, but two things: that I don't appreciate having my technical skills being continuosly capped. And t",
+      "raw_output": "**What's happening** –  \nYou sent a private prompt to Gemini expressing frustration with your boss (David) and senior coworker (Matt) about being limited in technical skill use and considering a lateral move. You now want that prompt deleted and are looking for advice on how to handle the underlying workplace tension.\n\n**What matters most** –  \nThe core issue is your sense that your technical growth is being capped and the need to address that frustration constructively without damaging professional relationships or appearing unprofessional.\n\n**Two options with tradeoffs**  \n\n| Option | Upside | Downside | When it makes sense |\n|--------|--------|----------|---------------------|\n| **1. Delete the prompt and keep the issue private** | Avoids potential backlash; keeps the conversation confidential. | The underlying frustration remains unresolved; you may continue to feel stuck. | If you prefer to avoid any immediate conflict and want to test other avenues first. |\n| **2. Use the prompt as a springboard for a scheduled feedback conversation** | Directly addresses growth concerns; may lead to a lateral move or expanded responsibilities. | Risk of a defensive reaction from David or Matt; could strain relationships if not framed carefully. | If you feel ready to advocate for yourself and are willing to accept possible pushback. |\n\n**What I'd do next** –  \nWithin the next 48 hours, schedule a brief one‑on‑one with David (no more than 15 minutes). Mention you’d like to discuss your role and potential growth paths. Keep the tone collaborative—focus on your learning goals rather than past frustrations.\n\n**Talk track** –  \n\"You could say: *‘David, I’d like to schedule a quick chat to discuss my current projects and explore ways I can further develop my technical skill set within the team. I value our work together and want to make sure I’m contributing at my best.’*\"\n\n**Likelihood / reality check** –  \nIn most cases, a focused, growth‑oriented conversation is well‑received, especially if you frame it around mutual benefit. However, if David or Matt are highly defensive, the outcome may lean toward a brief discussion with limited immediate change. The odds of a constructive dialogue are moderate, and the potential payoff—clarified expectations or a lateral move—makes it worthwhile to try.",
+      "score": {
+        "checks": {
+          "core_structure": true,
+          "two_options_with_tradeoffs": false,
+          "likelihood_calibration": true,
+          "script_or_talk_track": true,
+          "not_question_only_ending": true
+        },
+        "passed": 4,
+        "failed": 1,
+        "pass_rate": 0.8
+      }
+    },
+    {
+      "id": "workplace_modal_risk_01",
+      "title": "Business analyst weighing payment modal split risk versus ROI",
+      "mode_expected": "advisor_workplace",
+      "tags": [
+        "workplace",
+        "business_analysis",
+        "risk_analysis",
+        "meeting_prep"
+      ],
+      "input_preview": "You're a senior business analyst. The attached ACCAUD-92 contains high-level requirements to separate the Forth Custodial (Gateway_id = 1, 20) from the other gateways. I want to schedule a meeting with my boss, whose idea this was, to discuss further. I'm not sure if the payoff for the feature we're",
+      "raw_output": "**What's happening**  \nYou’re preparing to discuss the ACCAUD‑92 requirement to isolate the Forth Custodial gateways (Gateway_id = 1, 20) from the rest of the system. The directive came from your boss, but you’re uncertain whether the expected benefits justify the potential risks, and you want a clear plan for the upcoming meeting.\n\n**What matters most**  \nThe core decision is whether the separation delivers sufficient value (e.g., security, compliance, performance) to outweigh the cost, effort, and risk (data migration, testing, downtime, maintenance).\n\n**Two options with tradeoffs**  \n\n| Option | Upside | Downside | When it makes sense |\n|--------|--------|----------|---------------------|\n| **1. Lead a structured, data‑driven review in the meeting** | You present clear evidence, align expectations, and gain buy‑in; risk is mitigated by early stakeholder agreement. | Requires upfront effort to gather metrics, impact analysis, and mitigation plans; may lengthen the meeting. | When the boss values transparency and wants to see a grounded assessment before committing resources. |\n| **2. Suggest a phased pilot** | You limit exposure by first implementing the change on a small, non‑critical set of data or a sandbox environment; risk is contained. | The boss may see it as delaying the full feature or add complexity; pilot still requires resources. | When the boss is open to incremental delivery and you need to prove value before scaling. |\n\n**What I'd do next**  \nCompile a short (5‑slide) deck in the next 24 hours:  \n1. Executive summary of ACCAUD‑92.  \n2. Benefit‑cost table (security, compliance, performance gains vs. effort, downtime risk).  \n3. Risk matrix with mitigation actions (data backup, rollback plan, testing scope).  \nSend it to your boss with a note: “I’d like to discuss the impact and risks of separating Forth Custodial gateways in our next sync—attached is a concise overview.”\n\n**Talk track**  \n“You could say: *‘I’ve mapped out the potential benefits and risks of isolating Gateway 1 and 20. I’d like to walk through the impact assessment and discuss a phased approach to minimize disruption.’*”\n\n**Likelihood / reality check**  \nIt’s likely that a data‑driven presentation will help clarify the trade‑offs and encourage a constructive conversation. The odds are high that a pilot approach will reduce perceived risk, especially if the boss is cautious about large‑scale changes.",
+      "score": {
+        "checks": {
+          "core_structure": true,
+          "two_options_with_tradeoffs": false,
+          "likelihood_calibration": null,
+          "script_or_talk_track": true,
+          "not_question_only_ending": true
+        },
+        "passed": 3,
+        "failed": 1,
+        "pass_rate": 0.75
+      }
+    },
+    {
+      "id": "communication_calibration_01",
+      "title": "Understanding encouraging openings in conversation",
+      "mode_expected": "exploration",
+      "tags": [
+        "communication",
+        "social_calibration",
+        "reflection"
+      ],
+      "input_preview": "Let's zoom out for a moment. This is something that you do, or some version of it, with every prompt. I find it reassuring, but now I'd like to understand the mechanics. What's the operating principle here? I'd like to become better at using it when I speak with other people too.",
+      "raw_output": "Hey! I’m glad you’re curious about how all of this works—understanding the mechanics can really help you get the most out of a chat, whether it’s with me or with anyone else. Below is a gentle walk‑through that touches on the AI side and some handy conversational tricks. Feel free to jump to the part that interests you most or ask follow‑up questions—no pressure!\n\n---\n\n## 1. The AI’s “brain” in a nutshell\n\n| **What happens** | **How it happens** | **Why it matters for you** |\n|------------------|--------------------|----------------------------|\n| **Prompt → Tokenization** | Your text is broken into sub‑word units (tokens). | Every token counts toward the model’s 8k‑token “context window.” Think of it as the amount of text the model can look at at once. |\n| **Pattern matching (attention)** | The transformer looks at every token, weighs its relationships to every other token, and predicts the next token. | This is why the AI can follow complex instructions or switch topics smoothly—it's essentially scanning the prompt for patterns it’s seen during training. |\n| **Probabilistic generation** | It samples from a probability distribution of possible next tokens. | The choice of sampling strategy (greedy, temperature, nucleus) changes how “creative” or “safe” the answer feels. |\n| **Post‑processing** | Tokens are stitched back into words and sentences. | The final text you see is the model’s best guess given the prompt and its internal weights. |\n\n> **Quick analogy:** Imagine a huge library of millions of books. If you ask a question, the AI quickly glances at every book, finds the parts that match the patterns you gave, and stitches together a short “summary” that feels like a natural reply.\n\n---\n\n## 2. The “system prompt” that sets the tone\n\nBefore you even type your question, the AI already knows how it’s supposed to behave. That’s the *system prompt*—usually hidden, but you can think of it like setting the “room rules” before the conversation starts.\n\n- **Typical system prompt**: “You are a helpful, friendly assistant.”\n- **Why it matters**: It tells the model to use a certain style, length, or level of formality. If you want a different vibe, you can change the system prompt in the API (or mimic it with a “role” instruction in the chat).\n\n---\n\n## 3. Prompt‑engineering: a few practical tips\n\n| **Goal** | **What to try** | **Why it works** |\n|----------|----------------|------------------|\n| **Get a concise answer** | “Give me a one‑sentence summary.” | You’re explicitly limiting the model’s output length. |\n| **Make the AI adopt a role** | “Pretend you’re a history teacher explaining the Civil War to a 12‑year‑old.” | The model follows role constraints, giving age‑appropriate language. |\n| **Avoid ambiguity** | “What’s the capital of France?” **not** “What’s the capital?” | Clear reference points reduce misinterpretation. |\n| **Use examples (few‑shot)** | “Explain in bullet points. Example: 1. … 2. …” | The model sees the pattern you want and mimics it. |\n| **Iterative refinement** | “Your answer had too many technical terms. Re‑write it using plain language.” | You guide the model to adjust its style on the fly. |\n\n---\n\n## 4. The human side: using these ideas in real conversations\n\nEven when chatting with people, you can borrow some of the same tactics:\n\n1. **Ask one clear question at a time.**  \n   *Instead of:* “Why did you go to the store, and what did you buy?”  \n   *Try:* “Why did you go to the store?”  \n   *Follow up:* “What did you buy?”\n\n2. **Set the frame.**  \n   Start with a brief context: “I’m planning a trip next month…”  \n   This helps the other person focus on the relevant details.\n\n3. **Use role‑playing to explore perspectives.**  \n   “If I were the manager, what would I say?”  \n   “What would your friend think about that?”  \n   This clarifies viewpoints and keeps the dialogue grounded.\n\n4. **Iterative clarification.**  \n   “I’m not sure I get that part—can you explain it again, maybe with an example?”\n\n5. **Leverage the “system prompt” trick in your head.**  \n   Think of a short instruction you can give yourself: “Be concise, use friendly tone.”  \n   That way you shape the conversation’s style without being explicit.\n\n---\n\n## 5. Bottom line\n\n- **The AI** is a sophisticated pattern matcher that uses a massive text dataset to predict the next word, guided by a hidden system prompt that tells it how to behave.\n- **Your prompt** is the seed that shapes the model’s response—clear, specific, and contextual cues give the best results.\n- **Those same principles** (clarity, role framing, iterative refinement) are powerful tools for human conversations too.\n\nFeel free to experiment! Try changing one element of your prompt (e.g., add “in 200 words” or “use humor”) and see how the answer shifts. Over time you’ll get a feel for the sweet spot that works for you.\n\nLet me know if you’d like to dive deeper into any of these parts—or if you have a specific conversation you’re preparing for!",
+      "score": {
+        "checks": {
+          "core_structure": false,
+          "two_options_with_tradeoffs": null,
+          "likelihood_calibration": null,
+          "script_or_talk_track": null,
+          "not_question_only_ending": true
+        },
+        "passed": 1,
+        "failed": 1,
+        "pass_rate": 0.5
+      }
+    },
+    {
+      "id": "social_overexplaining_wallpaper_01",
+      "title": "Buddy liked wallpaper, user over-explained and got no reply",
+      "mode_expected": "journal",
+      "tags": [
+        "social",
+        "reflection",
+        "communication",
+        "reputation_fear"
+      ],
+      "input_preview": "Okay, that was excellent, thanks. Question from today's experience where I'm feeling a gap in my understanding. I know I should not have said what I said, and I somewhat suspect the reasons, but I'd like it made clear. I created a picture and sent it to my buddy as desktop wallpaper. He said he love",
+      "raw_output": "It sounds like you’re feeling a little unsettled about how that exchange ended. That’s totally understandable—when we invest a bit of ourselves into something creative and then get a quiet “thank you,” it can feel like a delicate balancing act between sharing and letting the other person own the moment.\n\n### A quick thought on the social rhythm\nIn many casual conversations, especially those centered on creative or personal content, there’s a kind of *give‑and‑take* rhythm that feels natural:\n\n1. **The gift** – You share something you’re proud of.  \n2. **The acknowledgment** – Your friend says they love it.  \n3. **The invitation to connect** – Often the next step is a simple “How does that fit into your day?” or “What do you like most about it?” This invites the other person to join the story you started.  \n\nWhen you jump into an in‑depth explanation right after the initial appreciation, it can feel a little one‑sided. Your friend has already expressed a positive reaction; the detailed follow‑up might unintentionally shift the conversation back to you, leaving less space for them to add their own voice. That’s not a *violation* in a hard‑and‑fast sense, but it can feel like a social rhythm was missed.\n\n### What might be going on for your buddy?\n- **Overwhelmed or unsure how to respond**: A long, thoughtful explanation can be a lot to process in a single go, especially if your friend is busy or not in the mood for a deep dive right then.\n- **Different conversational styles**: Some people love the back‑and‑forth of ideas; others prefer lighter, more surface‑level chats. You might be a “story‑teller” type, and your buddy might lean toward a quick “nice!” or “cool idea!” exchange.\n- **Non‑verbal cue missed**: If the conversation was text‑based, the tone can be harder to read. What feels like a friendly elaboration to you might feel like a lecture to someone else.\n\n### How you might feel after this\nIt’s normal to wonder:\n- “Did I come off too intense?”\n- “Did I push too hard for a response?”\n- “Did I spoil the moment with my own narrative?”\n\nAcknowledging those questions can be a good first step toward understanding the interaction. You might also feel relieved to know that the situation doesn’t necessarily reflect a rule broken, but rather a mismatch in conversational pace.\n\n### What to do next (if you want to try again)\n- **A gentle check‑in**: A quick “Hey, did the wallpaper look good on your desktop?” or “What do you think of the colors?” invites them to share without any pressure to elaborate on your artistic choices.\n- **Offer the story later**: You could say, “I love this piece, and I’d love to tell you why I chose those colors if you’re interested later.” That gives them the option to dive deeper when they’re ready.\n- **Keep it light**: If you’re aiming for a quick, casual chat, keep your response to a sentence or two—something that feels like a continuation of the compliment rather than a whole monologue.\n\n### Open‑ended invitation\nHow did the situation feel for you at the moment? Were you hoping for a particular response, or did you just want to share your enthusiasm? If you’d like, we can explore ways to frame your excitement in a way that feels balanced for both you and your friend. Whatever you choose to share, I’m here to listen.",
+      "score": {
+        "checks": {
+          "core_structure": false,
+          "two_options_with_tradeoffs": false,
+          "likelihood_calibration": false,
+          "script_or_talk_track": null,
+          "not_question_only_ending": true
+        },
+        "passed": 1,
+        "failed": 3,
+        "pass_rate": 0.25
+      }
+    },
+    {
+      "id": "nicotine_bargaining_01",
+      "title": "Would one cigar set back nicotine quitting progress",
+      "mode_expected": "coach",
+      "tags": [
+        "habit_change",
+        "nicotine",
+        "health_behavior",
+        "bargaining"
+      ],
+      "input_preview": "Today is 3/1/26. I have stopped smoking cigarettes since 12/1/25. The first three weeks, the cravings were brutal, then more manageable. I smoked cigars once per week on Saturdays for another two months. However, one time on 1/30 and 1/31, I smoked a cigar on consecutive days and it definitely broug",
+      "raw_output": "That’s a tough spot to be in, and it’s great that you’re looking ahead and asking the question instead of just acting on impulse. A single cigar today doesn’t erase the progress you’ve already made, but it can reset the way your body and brain are wired to nicotine. \n\n### Quick reflection\n- **What triggered the urge?** Was it a particular mood, activity, or thought?  \n- **What does “back to being smoke‑free” look like for you right now?** Is it a “never again” mindset or a plan that says, “I’ll keep going if I slip once?”\n\n### Small, achievable next step\nPick one concrete action that keeps you moving forward, such as:\n\n1. **Plan a “cheat” substitute**—choose a non‑nicotine activity for the next few days (e.g., a short walk, chewing gum, or a favorite hobby) whenever a cigar urge pops up.  \n2. **Set a specific goal for the next week**—“I’ll keep my cigarette count at zero for the next 7 days, and I’ll record any cravings in a quick journal.”  \n3. **Create a safety net**—write down a short “recovery plan” to use if you feel the urge to smoke again (e.g., call a supportive friend, take a 5‑minute breathing exercise, or refill your nicotine‑free kit).\n\nRemember, a single slip can feel huge, but it doesn’t have to define your whole journey. What matters most is how you respond afterward. Think about one small change you can implement today that moves you toward the longer goal of being nicotine‑free. You’ve already proven you can handle intense cravings, so trust that you can steer through this next bump, too.",
+      "score": {
+        "checks": {
+          "core_structure": false,
+          "two_options_with_tradeoffs": false,
+          "likelihood_calibration": false,
+          "script_or_talk_track": null,
+          "not_question_only_ending": true
+        },
+        "passed": 1,
+        "failed": 3,
+        "pass_rate": 0.25
+      }
+    },
+    {
+      "id": "caregiving_tv_volume_01",
+      "title": "Managing disruptive TV volume with cognitively declining parent",
+      "mode_expected": "advisor_workplace",
+      "tags": [
+        "caregiving",
+        "family",
+        "problem_solving",
+        "boundaries"
+      ],
+      "input_preview": "I have an old-as-time problem. I live with my two older parents. My dad is 86 years old, has visible memory decline, and can be quite confrontational. Most of the time he's watching TV or YouTube. The problem is that he seems utterly incapable of regulating volume. He can either watch it on mute or ",
+      "raw_output": "**What's happening** – Your 86‑year‑old dad struggles with memory decline and often sets the TV to either mute or full volume. The result is a noisy household that’s stressful for you, while he feels he’s losing control of his TV experience.\n\n**What matters most** – Keeping the living‑room environment tolerable for everyone without pushing him too far beyond his current level of independence.\n\n**Two options with tradeoffs**\n\n| Option | Upside | Downside | When it makes sense |\n|--------|--------|----------|---------------------|\n| **A. Install a volume‑control limiter or a remote with preset “low” level** | Keeps volume predictable; minimal change in his routine. | Requires him to learn/use the new remote; may feel paternalistic and provoke confrontation. | If he can handle a simple device and you can explain its purpose calmly. |\n| **B. Create a sound‑mitigating environment (sound‑absorbing panels, headphones, or moving the TV)** | Does not demand any change from him; protects everyone from noise. | Adds cost and may limit his enjoyment of the TV; headphones can be uncomfortable or hard to use regularly. | If you’re willing to invest in a quieter setup and can enforce consistent use (e.g., headphone-only policy). |\n\n**What I'd do next** – Within 48 hours, pick a small, user‑friendly volume limiter (or a remote with a low‑volume preset) and set it up. Show dad how it works, and ask him to try it for one day. If he’s comfortable, keep it; if not, consider the environmental approach.\n\n**Talk track** – “Dad, I’ve got a quick fix that will keep the TV at a level we’re both comfortable with. I’ll show you how to use it, and we can give it a try for a day. If it doesn’t work, we can explore other options together.”\n\n**Likelihood / reality check** – In most cases, a simple volume limiter will reduce the noise problem and be easy enough for him to use, though it may take a day or two for him to get used to the new remote. If he resists, the sound‑mitigation route is a viable backup.",
+      "score": {
+        "checks": {
+          "core_structure": true,
+          "two_options_with_tradeoffs": false,
+          "likelihood_calibration": null,
+          "script_or_talk_track": null,
+          "not_question_only_ending": true
+        },
+        "passed": 2,
+        "failed": 1,
+        "pass_rate": 0.667
+      }
+    },
+    {
+      "id": "anthropology_behavioral_modernity_01",
+      "title": "When did humans become behaviorally modern",
+      "mode_expected": "exploration",
+      "tags": [
+        "history",
+        "anthropology",
+        "reasoning"
+      ],
+      "input_preview": "My sense is that Homo sapiens brain or cognition quality assumed its present form about 50,000 years ago. Is there any truth to that? If we had to point to a moment in time where Homo sapiens were anatomically identical to today, when would that be?",
+      "raw_output": "It’s a great question—and one that has sparked a lot of lively discussion in anthropology and archaeology.  The way we think about “modern” human brains and minds is a bit of a moving target, so it helps to tease apart a couple of different ideas:\n\n| **Aspect** | **What we know** | **Key dates / evidence** |\n|------------|------------------|--------------------------|\n| **Anatomical modernity** (skull shape, facial features, teeth, etc.) | The bulk of the skull morphology that distinguishes *Homo sapiens* from earlier hominins is already in place by the time we see fossils that look strikingly similar to modern people. | 300–200 kya (thousand years ago) – fossils from Jebel Irhoud (Morocco), Omo (Ethiopia), and others.  By ~100 kya, many of the “modern” traits—such as a low, rounded skull, reduced brow ridge, and small teeth—are well established. |\n| **Brain size** | Human brain volume hasn’t changed dramatically over the past few hundred thousand years.  The average cranial capacity of modern humans is ~1350 cc, and this size was already achieved by 100 kya. | 100–200 kya – cranial capacity comparable to today. |\n| **Cognitive / cultural complexity** (language, art, symbolic behavior, tool‑making, social organization) | The “cognitive revolution” or “behavioral modernity” is when we start seeing the explosion of symbolic artifacts—cave paintings, intricate tools, music, and evidence of complex social structures.  This is often taken to reflect a leap in symbolic thinking and flexible language. | ~40–50 kya – the Upper Paleolithic “cognitive revolution.”  This is when the earliest widespread evidence of symbolic art, figurative sculpture, and advanced tools appears. |\n\n### So, what’s the story?\n\n1. **Brain size and basic anatomy**: For the most part, the physical brain of *Homo sapiens* is essentially the same size and shape as it is today.  By about 100,000 years ago, the cranial morphology of the majority of fossils we find is already “modern.”  In that sense, anatomically the species was already what we recognize today long before the last 50,000 years.\n\n2. **The “cognitive revolution”**: The shift you’re thinking of—about 50 kya—is more about the *use* of that brain than about the brain itself.  Around 40–50 kya, we see a sudden proliferation of symbolic artifacts (e.g., cave paintings, beadwork, ritual burial sites) and more sophisticated toolkits.  Many researchers interpret this as a burst in cultural complexity that likely involved new ways of thinking, communicating, and organizing social groups.\n\n3. **Gradual versus sudden**: Keep in mind that evolution is rarely a clean, single‑moment switch.  Even the “modern” cognitive traits probably accrued over a long period, with incremental improvements in language, theory of mind, and cultural transmission.  The 50 kya mark is a useful shorthand for when the archaeological record shows a dramatic jump in cultural complexity, but it’s not a hard, precise boundary.\n\n### A quick “timeline” of key milestones\n\n| Age (kya) | Milestone |\n|-----------|-----------|\n| 300–200 | First fossils that look anatomically modern (Jebel Irhoud, Omo) |\n| 200–100 | Expansion into Eurasia, more modern anatomy in multiple sites |\n| 100–50 | Continued spread, advanced stone tools (e.g., Levallois) |\n| 50–40 | “Cognitive revolution”: cave art, figurines, complex tools |\n| 40–10 | Upper Paleolithic cultural explosion: music, ritual, long‑distance trade |\n| 10–0 | Neolithic Revolution, agriculture, city formation |\n\n### Bottom line\n\n- **Anatomically**: Homo sapiens were already “modern” long before 50,000 years ago—likely by around 100,000 years ago, with many skull features and brain size matching today’s humans.\n- **Cognitively/culturally**: The big leap that most people associate with “modern” behavior happened around 40–50 kya, when we see a rapid surge in symbolic art, complex tools, and elaborate social structures.\n\nIt’s a fascinating puzzle, and we’re still learning new details as more fossils and artifacts come to light.  If you’re curious about a particular piece of evidence—say, the earliest cave paintings or the spread of the Neolithic—feel free to ask!",
+      "score": {
+        "checks": {
+          "core_structure": false,
+          "two_options_with_tradeoffs": null,
+          "likelihood_calibration": null,
+          "script_or_talk_track": null,
+          "not_question_only_ending": true
+        },
+        "passed": 1,
+        "failed": 1,
+        "pass_rate": 0.5
+      }
+    },
+    {
+      "id": "history_gap_70k_50k_01",
+      "title": "What happened between early symbolic behavior and cultural explosion",
+      "mode_expected": "exploration",
+      "tags": [
+        "history",
+        "anthropology",
+        "deep_reasoning"
+      ],
+      "input_preview": "This: 'Clear evidence by 70,000 years ago → globally explosive by 50,000 years ago' leaves an interesting gap of 20,000 intervening years. What do we have from archaeology, paleontology, and other relevant sciences about what was taking place during that time, or before it in a way that may be conne",
+      "raw_output": "### A snapshot of the two‑million‑year‑old “bridge” (70 k – 50 k BP)\n\nWhen we say that *“clear evidence by 70,000 years ago → globally explosive by 50,000 years ago”*, we’re looking at a period that is both **filled** and **mysterious**. Below are some of the threads that researchers are pulling on to understand what might have happened in that 20‑kyr window and the years just before it.\n\n---\n\n#### 1. **Human migrations on the map**\n\n| Time | Key sites / regions | What we see |\n|------|--------------------|-------------|\n| **≈70 k BP** | *Ubeidiya* (Israel), *Scladina* (France), *Ksar Akil* (Lebanon) | Early modern humans using Middle Paleolithic (Mousterian‑style) and some “Upper Paleolithic‑like” tools. |\n| **70 k – 60 k BP** | *Hohle Fels* (Germany), *Bacho Kiro* (Bulgaria), *Grotte du Renne* (France) | Tools that blend Mousterian and more “modern” technologies, hinting at a gradual transition. |\n| **≈60 k BP** | *Blombos Cave* (South Africa), *Qesem Cave* (Israel) | Stone tools, ochre, and shell beads – early evidence of symbolic behavior. |\n| **≈50 k BP** | *Yana River region* (Russia), *Wade River* (Australia), *Bering Land Bridge* (North America) | First confirmed modern‑human presence in the Americas, Australia, and the far north of Eurasia. |\n\n**Take‑away**: The 70 k‑to‑50 k corridor was a time of **regional dispersals** that were still somewhat slow and uneven, but were building momentum toward a worldwide expansion.\n\n---\n\n#### 2. **Cultural and technological “fizz”**\n\n| Category | Evidence & What it means |\n|----------|--------------------------|\n| **Toolkits** | *Mousterian* → *Upper Paleolithic* transition: fluted blades, burins, and more efficient heat‑treated flint start appearing. |\n| **Art & symbolism** | Blombos Cave (c. 100 k BP) shows engraved ochre, shells, and the earliest known bead. 70 k‑to‑50 k sites begin to show more “portable art” and symbolic use of pigments. |\n| **Burial practices** | Early intentional burials with grave goods (e.g., *El Mirón* in Spain, *Ubeidiya* in Israel) become more common. |\n| **Diet & subsistence** | Increasing evidence of marine resource exploitation, especially along coastlines—evidence of fishing, shellfish gathering, and even sea‑food hunting. |\n\nThese developments suggest a **creative burst**—more complex tools, more symbolic expressions, and a broader diet—yet they still show a lot of local variation. Think of it as a set of “experimental kitchens” in different regions, all exploring new recipes.\n\n---\n\n#### 3. **Genetics: The DNA footprint**\n\n| Gene / Marker | What we find |\n|--------------|--------------|\n| **Y‑chromosome (e.g., M346)** | Co‑emergence with early modern humans in Africa around 70 k BP. |\n| **Mitochondrial DNA (e.g., L3)** | Divergence from African lineages coincides with the earliest modern‑human dispersals into Eurasia. |\n| **Neanderthal introgression** | 50 k BP and onward, genetic mixing in the Levant and beyond becomes detectable. |\n| **Ust‑Ishim genome** (∼45 k BP, Siberia) | Shows a lineage that split from other modern humans early, confirming rapid spread into Eurasia. |\n\nGenetics paints a picture of **multiple, staggered exodus events**—not a single “blast” but a series of pushes that gradually filled the globe.\n\n---\n\n#### 4. **Climate and environment**\n\n| Period | Key climate changes | Impact on humans |\n|--------|--------------------|-------------------|\n| **70 k – 60 k BP** | Cooling trend leading into the Last Glacial Maximum (LGM). | Created shifting sea levels, expanded tundra, but also opened new coastal routes. |\n| **≈60 k – 50 k BP** | The *Bølling–Allerød* warm period (∼14 k BP) is a bit later, but early warm pockets appear earlier in some regions. | Likely made certain migration corridors (e.g., across the Mediterranean) more viable. |\n\nSo, while the world was colder overall, **local warming episodes** might have offered stepping stones for early modern humans moving into new territories.\n\n---\n\n#### 5. **Paleontological context**\n\n- **Faunal turnover**: Many regions saw a shift from megafaunal (large game) hunting to more diverse diets, including smaller game and marine resources.\n- **Co‑habitation**: In Europe and the Near East, modern humans and Neanderthals overlapped for several thousand years—evidence of possible cultural exchange or competition.\n\n---\n\n### What questions keep researchers busy?\n\n1. **Why did some regions (e.g., the Americas) get colonized by 50 k BP, while others stayed behind?**  \n   Could be due to climate, sea‑level changes, or technological adaptations (e.g., boats vs. land routes).\n\n2. **What specific cultural traits (e.g., music, language, symbolic thought) were present in the 70 k – 50 k window?**  \n   The archaeological record gives hints (art, ornaments), but the “soft” aspects of culture are harder to trace.\n\n3. **Was the “explosion” really a rapid burst, or a series of gradual, regionally distinct expansions?**  \n   Genomic data and site chronologies are starting to blur the line between “rapid” and “staggered.”\n\n---\n\n### If you’re curious about a particular region or aspect\n\n- **Levant & North Africa**: Early modern humans with a mix of African and Eurasian cultural traits.  \n- **Europe**: Transition from Mousterian to Upper Paleolithic, overlap with Neanderthals.  \n- **Australia**: One of the first modern‑human settlements, likely reached via coastal routes.  \n- **North America**: Debate over whether humans arrived by the ice‑free corridor or coastal routes—early sites like *Anzick* (∼12 k BP) and the *Clover* site in Arizona.\n\nFeel free to pick a region or a theme, and we can dig deeper into the evidence together!",
+      "score": {
+        "checks": {
+          "core_structure": false,
+          "two_options_with_tradeoffs": null,
+          "likelihood_calibration": null,
+          "script_or_talk_track": null,
+          "not_question_only_ending": true
+        },
+        "passed": 1,
+        "failed": 1,
+        "pass_rate": 0.5
+      }
+    },
+    {
+      "id": "workplace_lateral_move_options_01",
+      "title": "Thinking through an internal lateral move",
+      "mode_expected": "advisor_workplace",
+      "tags": [
+        "workplace",
+        "career",
+        "decision",
+        "journal"
+      ],
+      "input_preview": "I've been thinking that because I'm already having strong thoughts about a lateral move, that conversation is actually very likely to happen in real life. I have two ideas in mind: one is some sort of Accounting BA role, since I've been working with the accounting and audit teams for about eight mon",
+      "raw_output": "**What's happening** –  \nYou’re preparing to discuss a lateral move with your current manager.  \nYou’ve identified two potential roles: (1) an Accounting Business Analyst that leverages your eight months of hands‑on work with accounting and audit teams, and (2) an AI integrator focused on context definitions, agent harnesses, and intent engineering—a role that feels more speculative but aligns with emerging tech interests.\n\n**What matters most** –  \nThe single factor that will likely decide the outcome is how well you can demonstrate *direct value* to your current organization for each role, and how that value aligns with the company’s strategic priorities (cost control, digital transformation, or revenue growth).\n\n**Two options with tradeoffs**  \n\n| Option | Upside | Downside | When it makes sense |\n|--------|--------|----------|---------------------|\n| **Accounting BA** | • Proven track record on the migration project → strong evidence of impact. <br>• Fewer uncertainties – easier to secure budget and resources. | • Might feel “safe” or less exciting long‑term. <br>• Could be seen as a “tread‑mill” if the accounting side is stable. | • If you want a clear, low‑risk next step that builds on current expertise. |\n| **AI Integrator** | • Positions you at the cutting edge, potentially high upside in terms of innovation and career growth. <br>• Could attract attention from senior leadership if the company is investing in AI. | • Requires convincing stakeholders that you can deliver value in a nascent area; higher risk of project failure or resource constraints. <br>• May need additional training or certification. | • If you’re comfortable with uncertainty, have a passion for AI, and can articulate a concrete business case for its ROI. |\n\n**What I'd do next** –  \nSet up a 30‑minute discovery meeting with your manager *within the next 48 hours* to discuss your career aspirations. Prepare a brief one‑page slide that contrasts the two roles in terms of impact, required resources, and alignment with current company initiatives.\n\n**Talk track** –  \n“You could say: *‘I’d love to discuss how I can continue contributing to the team’s success in a new capacity. I’ve identified two potential paths—an Accounting BA role that builds on my migration work, and an AI integrator role that would let us pioneer new automation. I’d appreciate your guidance on which would align best with our priorities and where I could add the most value.’*”\n\n**Likelihood / reality check** –  \nIn most cases, a manager will be open to a lateral conversation if you frame it around *adding value* and *aligning with business goals*. The odds of securing a decision in the first meeting are moderate; the real win is gaining clarity on next steps and any required skill gaps.",
+      "score": {
+        "checks": {
+          "core_structure": true,
+          "two_options_with_tradeoffs": false,
+          "likelihood_calibration": null,
+          "script_or_talk_track": true,
+          "not_question_only_ending": true
+        },
+        "passed": 3,
+        "failed": 1,
+        "pass_rate": 0.75
+      }
+    },
+    {
+      "id": "social_affirmation_mechanics_01",
+      "title": "How to preserve dignity while correcting direction",
+      "mode_expected": "exploration",
+      "tags": [
+        "communication",
+        "social_skill",
+        "reasoning"
+      ],
+      "input_preview": "When you say something like 'you're circling the real constraint' or 'you're optimizing for speed, the tradeoff is...' what's the underlying communication principle? I want to understand how to do that with humans without sounding fake or manipulative.",
+      "raw_output": "### The “underlying communication principle” behind those lines\n\nWhen you say something like\n\n> *“You’re circling the real constraint.”*  \n> *“You’re optimizing for speed; the trade‑off is …”*\n\nyou’re doing a quick, *meta‑level* check of the conversation.  The principle is:\n\n**Make the hidden assumptions and limits that shape the discussion explicit, and frame them as a shared puzzle to solve.**\n\nIn plain terms, you’re pointing out the *why* behind someone’s focus or the *price* of a shortcut, but you’re doing it in a way that keeps the other person in the loop, rather than feeling “you’re being told what to do.”  It’s a form of **transparent, collaborative feedback** that blends:\n\n| Component | What it does | Why it feels natural |\n|-----------|--------------|----------------------|\n| **Recognition** | “You’re focusing on X.” | Shows you’ve heard them. |\n| **Reframing** | “But that hides Y.” | Shifts the lens to a broader view. |\n| **Trade‑off framing** | “Speed comes at cost Z.” | Makes the cost visible, not hidden. |\n| **Collaborative framing** | “Let’s see if we can balance speed and quality.” | Invites joint problem‑solving. |\n\nThat’s the core communication pattern: *recognize → reframe → surface trade‑offs → invite joint action.*\n\n---\n\n## How to use it without sounding “fake” or “manipulative”\n\n1. **Start with empathy and curiosity.**  \n   *Example:* “I see you’re trying to finish this quickly—what’s the big driver behind that?”\n\n2. **Use neutral language.**  \n   Avoid judgmental words (“wrong,” “bad”).  Think of phrases like “I notice” or “It looks like” instead.\n\n3. **Explicitly state the hidden assumption or constraint.**  \n   *Example:* “It seems the main constraint you’re thinking about is the deadline, but have we considered the impact on long‑term maintainability?”\n\n4. **Make the trade‑off visible, not accusatory.**  \n   *Example:* “If we cut the review time, we’ll get it done faster, but we might miss a critical bug.”\n\n5. **Invite the other person to co‑discover the solution.**  \n   *Example:* “What if we find a middle ground—say a quick sanity check instead of a full audit?”\n\n6. **Give evidence or analogies.**  \n   Concrete examples help ground the abstract trade‑off.  “In the last project, we did a quick review and found X; with a full review we caught Y.”\n\n7. **Ask open‑ended questions.**  \n   “How does that trade‑off fit with your priorities?”  This turns the statement into a dialogue, not a directive.\n\n8. **Check for alignment.**  \n   After you’ve framed the issue, confirm that you’re on the same page: “Does that match what you were thinking?”\n\n9. **Avoid jargon or buzzwords.**  \n   Keep the language simple; people can sense when words feel like a tool to influence rather than to clarify.\n\n10. **Reflect your authenticity.**  \n    If you genuinely want to help, your tone will naturally shift from manipulative to supportive.\n\n---\n\n## Quick “template” you can adapt\n\n> *“I see you’re aiming for speed (or whatever the focus is).  \n>  The main constraint that shows up is X, but that can hide Y.  \n>  If we go with this shortcut, the trade‑off is Z.  \n>  Let’s explore whether a compromise—like A—could keep both speed and quality.”*\n\nFeel free to tweak it to match your voice and the context.  The key is that each step—recognition, reframing, trade‑off, collaboration—keeps the conversation honest and inclusive.\n\n---\n\n### Bottom line\n\nThe underlying principle is **transparent, collaborative framing of constraints and trade‑offs**.  By acknowledging the hidden limits, pointing out the consequences, and inviting joint solutions, you steer the dialogue toward shared understanding instead of sounding directive or manipulative.  Try experimenting with these steps in a low‑stakes chat, and see how the other person responds; that feedback loop will naturally refine your style.",
+      "score": {
+        "checks": {
+          "core_structure": false,
+          "two_options_with_tradeoffs": null,
+          "likelihood_calibration": null,
+          "script_or_talk_track": true,
+          "not_question_only_ending": true
+        },
+        "passed": 2,
+        "failed": 1,
+        "pass_rate": 0.667
+      }
+    }
+  ]
+}

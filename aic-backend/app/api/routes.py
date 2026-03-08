@@ -6,7 +6,7 @@ from app.ingestion.local_files import ingest_local_paths, ingest_local_paths_str
 from app.ingestion.gmail import ingest_gmail_messages
 from app.ingestion.facebook_export import ingest_facebook_export
 from app.ingestion.youtube_export import ingest_youtube_export
-from app.llm.policy import detect_distress, normalize_mode
+from app.llm.policy import detect_distress, is_workplace_prompt, normalize_mode
 from app.llm.response import generate_response
 from app.retrieval.search import retrieve
 from app.storage.chat import create_chat_message, delete_chat_message, list_chat_messages
@@ -315,6 +315,8 @@ def post_chat_message(request: ChatRequest) -> dict:
     mode = normalize_mode(request.mode)
     if detect_distress(request.content):
         mode = "crisis"
+    elif mode == "journal" and is_workplace_prompt(request.content):
+        mode = "advisor_workplace"
 
     user_message = create_chat_message(
         role="user",

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 from eval.rubric import score_output
 from app.llm.response import generate_response
 
-
-FIXTURE_PATH = Path("tests/fixtures/journal_cases.json")
-OUTPUT_PATH = Path("eval/outputs/eval_results.json")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+FIXTURE_PATH = _REPO_ROOT / "tests" / "fixtures" / "journal_cases.json"
+OUTPUT_PATH = _REPO_ROOT / "eval" / "outputs" / "eval_results.json"
 
 
 def load_fixtures() -> list[dict]:
@@ -51,7 +51,7 @@ def summarize(results: list[dict]) -> dict:
         total_failed += r["score"]["failed"]
 
     return {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "total_cases": total_cases,
         "total_checks": total_checks,
         "total_passed": total_passed,
