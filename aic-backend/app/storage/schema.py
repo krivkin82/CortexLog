@@ -189,4 +189,5 @@ SCHEMA_STATEMENTS = [
 MIGRATION_STATEMENTS = [
     "ALTER TABLE entities ADD COLUMN source TEXT",
     "ALTER TABLE items ADD COLUMN primary_category TEXT",
+    "ALTER TABLE journal_entries ADD COLUMN reflection TEXT",
 ]

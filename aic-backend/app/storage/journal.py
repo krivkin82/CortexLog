@@ -41,14 +41,16 @@ def create_journal_entry(
     }
 
 
-def list_journal_entries(limit: int = 50) -> List[Dict[str, Any]]:
+def list_journal_entries(limit: int = 50, order: str = "ASC") -> List[Dict[str, Any]]:
+    """Return journal entries. order='ASC' for oldest-first (feed), 'DESC' for newest-first."""
     conn = get_connection()
     cursor = conn.cursor()
+    order_clause = "ASC" if order.upper() == "ASC" else "DESC"
     cursor.execute(
-        """
-        SELECT id, content, structured_fields, created_at, user_id
+        f"""
+        SELECT id, content, structured_fields, created_at, user_id, reflection
         FROM journal_entries
-        ORDER BY created_at DESC
+        ORDER BY created_at {order_clause}
         LIMIT ?
         """,
         (limit,),
@@ -64,9 +66,40 @@ def list_journal_entries(limit: int = 50) -> List[Dict[str, Any]]:
                 "structured_fields": json.loads(row["structured_fields"]) if row["structured_fields"] else None,
                 "created_at": row["created_at"],
                 "user_id": row["user_id"],
+                "reflection": (row["reflection"] or None) if "reflection" in row.keys() else None,
             }
         )
     return entries
+
+
+def delete_journal_entry(entry_id: str) -> bool:
+    """Delete a journal entry by id. Returns True if deleted."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM journal_entries WHERE id = ?", (entry_id,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
+def update_journal_reflection(entry_id: str, reflection: str) -> bool:
+    """Update the reflection on a journal entry. Returns True if updated."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE journal_entries SET reflection = ? WHERE id = ?",
+        (reflection, entry_id),
+    )
+    updated = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return updated
+
+
+def clear_journal_reflection(entry_id: str) -> bool:
+    """Clear the reflection on a journal entry. Returns True if cleared."""
+    return update_journal_reflection(entry_id, "")
 
 
 def get_journal_entry(entry_id: str) -> Dict[str, Any] | None:
@@ -75,7 +108,7 @@ def get_journal_entry(entry_id: str) -> Dict[str, Any] | None:
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, content, structured_fields, created_at, user_id
+        SELECT id, content, structured_fields, created_at, user_id, reflection
         FROM journal_entries
         WHERE id = ?
         """,
@@ -91,4 +124,5 @@ def get_journal_entry(entry_id: str) -> Dict[str, Any] | None:
         "structured_fields": json.loads(row["structured_fields"]) if row["structured_fields"] else None,
         "created_at": row["created_at"],
         "user_id": row["user_id"],
+        "reflection": (row["reflection"] or None) if "reflection" in row.keys() else None,
     }

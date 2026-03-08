@@ -43,6 +43,17 @@ def create_chat_message(
     }
 
 
+def delete_chat_message(message_id: str) -> bool:
+    """Delete a chat message by id. Returns True if deleted."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM chat_messages WHERE id = ?", (message_id,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
 def list_chat_messages(limit: int = 50, session_id: Optional[str] = None) -> List[Dict[str, str]]:
     conn = get_connection()
     cursor = conn.cursor()

@@ -1,0 +1,18 @@
+---
+description: Security, auth, and secret store – architecture and where to look
+globs: aic-backend/app/security/**/*,aic-backend/app/api/routes.py,aic-electron/main.js,aic-electron/preload.js,aic-electron/renderer/*gmail*,aic-electron/renderer/security*,aic-electron/renderer/crypto-utils.js
+alwaysApply: false
+---
+
+# Security architecture
+
+When modifying **auth**, **API token**, **secret store**, **encryption**, **Gmail token**, or **password** flows:
+
+**Read this first:** `docs/SECURITY_ARCHITECTURE.md` (project root)
+
+That doc describes:
+
+- Where API token, salt, password hash, and secrets are stored
+- Backend modules: `api_auth`, `auth_data`, `encryption`, `secret_store`
+- Frontend: `crypto-utils.js`, `apiFetch()`, Connections > Gmail, Security window
+- Key derivation (PBKDF2, 100k iter) – backend and client must match

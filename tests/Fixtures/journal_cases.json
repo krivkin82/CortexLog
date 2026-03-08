@@ -1,0 +1,142 @@
+[
+  {
+    "id": "workplace_gemini_prompt_concern_01",
+    "title": "Worried internal Gemini prompt may be seen by employer",
+    "mode_expected": "advisor_workplace",
+    "tags": ["workplace", "career", "reputation_fear", "journal"],
+    "input": "2/28/26, 12:09 AM I input a prompt into Gemini that I'd like to be able to delete. I was upset with my senior co-worker and my boss and I input a prompt that showed that I was upset. Nothing too crazy, but two things: that I don't appreciate having my technical skills being continuosly capped. And that I'm considering having a conversation about a lateral move. I guess I should explain a little more. I think David, my boss, and Matt, senior 30yo co-worker, both of whom have been at the company for about 11 years (I've been there for two and change), have a very defensive, CYA attitude... So, just thinking about all of those things - let me know your thoughts.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": true,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "workplace_modal_risk_01",
+    "title": "Business analyst weighing payment modal split risk versus ROI",
+    "mode_expected": "advisor_workplace",
+    "tags": ["workplace", "business_analysis", "risk_analysis", "meeting_prep"],
+    "input": "You're a senior business analyst. The attached ACCAUD-92 contains high-level requirements to separate the Forth Custodial (Gateway_id = 1, 20) from the other gateways. I want to schedule a meeting with my boss, whose idea this was, to discuss further. I'm not sure if the payoff for the feature we're building is necessarily worth the risk. Review the attached materials, share your thoughts, and identify risk mitigation strategies.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "communication_calibration_01",
+    "title": "Understanding encouraging openings in conversation",
+    "mode_expected": "exploration",
+    "tags": ["communication", "social_calibration", "reflection"],
+    "input": "Let's zoom out for a moment. This is something that you do, or some version of it, with every prompt. I find it reassuring, but now I'd like to understand the mechanics. What's the operating principle here? I'd like to become better at using it when I speak with other people too.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "social_overexplaining_wallpaper_01",
+    "title": "Buddy liked wallpaper, user over-explained and got no reply",
+    "mode_expected": "journal",
+    "tags": ["social", "reflection", "communication", "reputation_fear"],
+    "input": "Okay, that was excellent, thanks. Question from today's experience where I'm feeling a gap in my understanding. I know I should not have said what I said, and I somewhat suspect the reasons, but I'd like it made clear. I created a picture and sent it to my buddy as desktop wallpaper. He said he loved it and set it as his main. I then replied by over-explaining some artistic choices and the mood of the image. He never responded. That doesn't mean anything by itself, but I think I violated some social principle here. Provide your thoughts.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": true,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "nicotine_bargaining_01",
+    "title": "Would one cigar set back nicotine quitting progress",
+    "mode_expected": "coach",
+    "tags": ["habit_change", "nicotine", "health_behavior", "bargaining"],
+    "input": "Today is 3/1/26. I have stopped smoking cigarettes since 12/1/25. The first three weeks, the cravings were brutal, then more manageable. I smoked cigars once per week on Saturdays for another two months. However, one time on 1/30 and 1/31, I smoked a cigar on consecutive days and it definitely brought me back into it. Question: would it be okay for me to go have a cigar in the context of my quest to become nicotine and smoking-addiction free? How far back would a cigar today set me back on my quitting goals? Is there a mitigation strategy other than all-or-nothing?",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": true,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "caregiving_tv_volume_01",
+    "title": "Managing disruptive TV volume with cognitively declining parent",
+    "mode_expected": "advisor_workplace",
+    "tags": ["caregiving", "family", "problem_solving", "boundaries"],
+    "input": "I have an old-as-time problem. I live with my two older parents. My dad is 86 years old, has visible memory decline, and can be quite confrontational. Most of the time he's watching TV or YouTube. The problem is that he seems utterly incapable of regulating volume. He can either watch it on mute or at full blast. I feel bad about him watching TV with the volume off, but I can't have his TV forcefully pouring down my soul all day. What can I do?",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "anthropology_behavioral_modernity_01",
+    "title": "When did humans become behaviorally modern",
+    "mode_expected": "exploration",
+    "tags": ["history", "anthropology", "reasoning"],
+    "input": "My sense is that Homo sapiens brain or cognition quality assumed its present form about 50,000 years ago. Is there any truth to that? If we had to point to a moment in time where Homo sapiens were anatomically identical to today, when would that be?",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "history_gap_70k_50k_01",
+    "title": "What happened between early symbolic behavior and cultural explosion",
+    "mode_expected": "exploration",
+    "tags": ["history", "anthropology", "deep_reasoning"],
+    "input": "This: 'Clear evidence by 70,000 years ago → globally explosive by 50,000 years ago' leaves an interesting gap of 20,000 intervening years. What do we have from archaeology, paleontology, and other relevant sciences about what was taking place during that time, or before it in a way that may be connected?",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "workplace_lateral_move_options_01",
+    "title": "Thinking through an internal lateral move",
+    "mode_expected": "advisor_workplace",
+    "tags": ["workplace", "career", "decision", "journal"],
+    "input": "I've been thinking that because I'm already having strong thoughts about a lateral move, that conversation is actually very likely to happen in real life. I have two ideas in mind: one is some sort of Accounting BA role, since I've been working with the accounting and audit teams for about eight months on the accounting platform migration. The other is something a little crazier, like an AI integrator role focused on context definitions, agent harnesses, and intent engineering. Help me think through how to frame the conversation around a lateral move.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "social_affirmation_mechanics_01",
+    "title": "How to preserve dignity while correcting direction",
+    "mode_expected": "exploration",
+    "tags": ["communication", "social_skill", "reasoning"],
+    "input": "When you say something like 'you're circling the real constraint' or 'you're optimizing for speed, the tradeoff is...' what's the underlying communication principle? I want to understand how to do that with humans without sounding fake or manipulative.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  }
+]

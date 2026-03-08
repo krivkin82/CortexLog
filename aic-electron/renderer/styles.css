@@ -13,6 +13,7 @@ body {
   display: flex;
   flex-direction: column;
   font-family: Arial, sans-serif;
+  font-size: 14px;
   color: #111;
   background: #f6f7f9;
 }
@@ -37,14 +38,23 @@ body {
   padding: 6px 10px;
   font-size: 13px;
   background: #374151;
+  color: #fff;
 }
 
 .panel-toggle:hover {
   background: #111827;
 }
 
+.app-header-narrow {
+  padding: 8px 16px;
+}
+
+.app-header-narrow h1 {
+  font-size: 1.1em;
+}
+
 .status {
-  font-size: 14px;
+  font-size: 13px;
   color: #555;
 }
 
@@ -78,6 +88,179 @@ body {
 
 .app-main.resizable-layout {
   gap: 0;
+}
+
+.app-main-overhaul {
+  padding: 12px;
+  gap: 0;
+}
+
+.content-area {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  position: relative;
+}
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+}
+
+.watercolor-text {
+  font-size: 4rem;
+  font-weight: 300;
+  color: rgba(100, 116, 139, 0.15);
+  user-select: none;
+  pointer-events: none;
+}
+
+.pane-journal,
+.pane-chat {
+  flex: 1 1 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pane-journal.hidden,
+.pane-chat.hidden {
+  display: none !important;
+}
+
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.pane-header h2 {
+  margin: 0;
+  font-size: 1em;
+}
+
+.pane-close {
+  padding: 2px 6px;
+  font-size: 14px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.pane-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.splitter-content {
+  width: 4px;
+  min-width: 4px;
+  background: #e5e7eb;
+  cursor: col-resize;
+  flex-shrink: 0;
+}
+
+.splitter-content:hover {
+  background: #1d4ed8;
+}
+
+.splitter-content.hidden {
+  display: none !important;
+}
+
+.textarea-auto-wrap {
+  margin: 8px 0;
+}
+
+.textarea-auto-wrap textarea {
+  min-height: 56px;
+  resize: none;
+  overflow-y: auto;
+}
+
+.journal-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feed-item {
+  padding: 12px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.feed-item.journal-entry {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.feed-item.reflection {
+  background: #f5f3ff;
+  border: 1px solid #e9d5ff;
+  margin-left: 12px;
+}
+
+.feed-item .item-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.feed-item .item-delete:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.chat-message {
+  position: relative;
+}
+
+.chat-message .item-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.chat-message .item-delete:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.col-knowledge.collapsed,
+.col-insights.collapsed {
+  flex: 0 0 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden;
+}
+
+.splitter-km.hidden,
+.splitter-pi.hidden {
+  display: none;
 }
 
 .resize-col {
@@ -471,6 +654,12 @@ ul {
   gap: 8px;
 }
 
+.settings-hint {
+  font-size: 13px;
+  color: #555;
+  margin: 0;
+}
+
 .path-row {
   display: flex;
   gap: 8px;
@@ -507,4 +696,41 @@ ul {
 
 .ingest-progress .ingest-error {
   color: #b42318;
+}
+
+/* Connections Gmail & Security windows */
+body.connections-gmail,
+body.security-settings {
+  padding: 24px;
+}
+
+.connection-section {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+
+.token-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.token-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast {
+  color: #1a7f37;
+  font-size: 14px;
+}
+
+.reset-info {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #555;
+  max-width: 400px;
 }

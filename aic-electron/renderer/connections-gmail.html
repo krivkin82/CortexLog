@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gmail Connection</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="connections-gmail">
+    <h1>Gmail Connection</h1>
+    <div id="password-prompt" class="connection-section">
+      <p>Enter your application password to unlock the Gmail access token.</p>
+      <input type="password" id="unlock-password" placeholder="Application password" />
+      <button id="unlock-btn">Unlock</button>
+      <p id="unlock-error" class="error hidden"></p>
+    </div>
+    <div id="token-section" class="connection-section hidden">
+      <label>Gmail Access Token</label>
+      <div class="token-row">
+        <input type="password" id="gmail-token" placeholder="Gmail access token" />
+        <button id="toggle-show" type="button" title="Show token">Show</button>
+      </div>
+      <button id="save-token">Save</button>
+      <p id="save-status" class="status hidden"></p>
+    </div>
+    <script src="./crypto-utils.js"></script>
+    <script src="./connections-gmail.js"></script>
+  </body>
+</html>

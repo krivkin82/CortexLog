@@ -21,6 +21,10 @@ dist/
 # Database
 *.db
 
+# Local auth / secrets (do not commit)
+data/api_token
+data/auth.json
+
 # Logs
 *.log
 

@@ -25,3 +25,20 @@ def decrypt_text(cipher_text: str, passphrase: str, salt: str) -> Optional[str]:
     except Exception:
         return None
     return plain.decode("utf-8")
+
+
+def encrypt_with_derived_key(plain_text: str, fernet_key_b64: str) -> str:
+    """Encrypt using a client-provided Fernet key (base64url)."""
+    fernet = Fernet(fernet_key_b64.encode("utf-8"))
+    token = fernet.encrypt(plain_text.encode("utf-8"))
+    return token.decode("utf-8")
+
+
+def decrypt_with_derived_key(cipher_text: str, fernet_key_b64: str) -> Optional[str]:
+    """Decrypt using a client-provided Fernet key (base64url)."""
+    fernet = Fernet(fernet_key_b64.encode("utf-8"))
+    try:
+        plain = fernet.decrypt(cipher_text.encode("utf-8"))
+    except Exception:
+        return None
+    return plain.decode("utf-8")

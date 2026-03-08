@@ -9,8 +9,15 @@ from app.ingestion.youtube_export import ingest_youtube_export
 from app.llm.policy import detect_distress, normalize_mode
 from app.llm.response import generate_response
 from app.retrieval.search import retrieve
-from app.storage.chat import create_chat_message, list_chat_messages
-from app.storage.journal import create_journal_entry, get_journal_entry, list_journal_entries
+from app.storage.chat import create_chat_message, delete_chat_message, list_chat_messages
+from app.storage.journal import (
+    create_journal_entry,
+    delete_journal_entry,
+    get_journal_entry,
+    list_journal_entries,
+    update_journal_reflection,
+    clear_journal_reflection,
+)
 from app.storage.items import create_item
 from app.storage.items import get_item
 from app.storage.proposed_insights import (
@@ -35,7 +42,17 @@ from app.storage.llm_analysis import list_items_needing_analysis, list_items_wit
 from app.storage.conflicts import list_conflicts, update_conflict_status
 from app.storage.export import export_all
 from app.storage.admin import wipe_all_data
-from app.security.secret_store import get_secret, store_secret
+from app.security.secret_store import (
+    get_secret,
+    get_secret_with_key,
+    store_secret,
+    store_secret_with_key,
+)
+from app.security.auth_data import (
+    get_salt,
+    set_password_hash,
+    verify_password_hash,
+)
 from app.storage.settings import get_setting, set_setting
 from app.storage.provenance import create_provenance, list_provenance_for_entity
 from app.storage.relations import delete_relation, list_relations
@@ -46,6 +63,33 @@ router = APIRouter()
 @router.get("/health")
 def health_check() -> dict:
     return {"status": "ok"}
+
+
+# --- Auth: salt and password verification ---
+
+@router.get("/auth/salt")
+def auth_salt() -> dict:
+    return {"salt": get_salt()}
+
+
+class SetPasswordRequest(BaseModel):
+    password_hash: str
+
+
+class VerifyPasswordRequest(BaseModel):
+    password_hash: str
+
+
+@router.post("/auth/set-password")
+def auth_set_password(request: SetPasswordRequest) -> dict:
+    set_password_hash(request.password_hash)
+    return {"ok": True}
+
+
+@router.post("/auth/verify")
+def auth_verify(request: VerifyPasswordRequest) -> dict:
+    ok = verify_password_hash(request.password_hash)
+    return {"ok": ok}
 
 
 @router.get("/health/llm")
@@ -202,7 +246,7 @@ def journal_reflect(request: JournalReflectRequest | None = None) -> dict:
     if req.entry_id:
         entry = get_journal_entry(req.entry_id)
     else:
-        entries = list_journal_entries(limit=1)
+        entries = list_journal_entries(limit=1, order="DESC")
         entry = entries[0] if entries else None
     if not entry:
         raise HTTPException(status_code=404, detail="No journal entry found")
@@ -228,7 +272,24 @@ def journal_reflect(request: JournalReflectRequest | None = None) -> dict:
             status_code=503,
             detail="LLM unavailable. Is Ollama running?",
         )
-    return {"text": text or "", "entry_id": entry_id}
+    reflection_text = text or ""
+    update_journal_reflection(entry_id, reflection_text)
+    return {"text": reflection_text, "entry_id": entry_id}
+
+
+@router.delete("/journal/{entry_id}/reflection")
+def remove_journal_reflection(entry_id: str) -> dict:
+    if get_journal_entry(entry_id) is None:
+        raise HTTPException(status_code=404, detail="Journal entry not found")
+    clear_journal_reflection(entry_id)
+    return {"ok": True}
+
+
+@router.delete("/journal/{entry_id}")
+def remove_journal_entry_route(entry_id: str) -> dict:
+    if not delete_journal_entry(entry_id):
+        raise HTTPException(status_code=404, detail="Journal entry not found")
+    return {"ok": True}
 
 
 class ChatRequest(BaseModel):
@@ -240,6 +301,13 @@ class ChatRequest(BaseModel):
 @router.get("/chat")
 def get_chat_messages(session_id: str | None = None) -> dict:
     return {"messages": list_chat_messages(session_id=session_id)}
+
+
+@router.delete("/chat/{message_id}")
+def remove_chat_message_route(message_id: str) -> dict:
+    if not delete_chat_message(message_id):
+        raise HTTPException(status_code=404, detail="Chat message not found")
+    return {"ok": True}
 
 
 @router.post("/chat")
@@ -478,6 +546,29 @@ class SecretStoreRequest(BaseModel):
 class SecretGetRequest(BaseModel):
     key: str
     passphrase: str
+
+
+class SecretStoreWithKeyRequest(BaseModel):
+    key: str
+    value: str
+    derived_key: str
+
+
+class SecretGetWithKeyRequest(BaseModel):
+    key: str
+    derived_key: str
+
+
+@router.post("/secrets/store-with-key")
+def store_secret_with_key_value(request: SecretStoreWithKeyRequest) -> dict:
+    store_secret_with_key(request.key, request.value, request.derived_key)
+    return {"ok": True}
+
+
+@router.post("/secrets/get-with-key")
+def get_secret_with_key_value(request: SecretGetWithKeyRequest) -> dict:
+    value = get_secret_with_key(request.key, request.derived_key)
+    return {"value": value}
 
 
 @router.post("/secrets/store")

@@ -4,6 +4,7 @@ This is a **searchable index** for likely issues in the AIC MVP, organized by **
 
 Also see:
 - `.cursor/debug-journal.md` (chronological log of what happened and what fixed it)
+- `docs/SECURITY_ARCHITECTURE.md` (auth, API token, secret store, encryption – what, where, how)
 
 ---
 

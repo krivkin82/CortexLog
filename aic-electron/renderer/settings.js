@@ -1,8 +1,15 @@
 const exportButton = document.getElementById("export-data");
 const deleteButton = document.getElementById("delete-data");
 
+const apiFetch = async (url, options = {}) => {
+  const key = window.aic?.getApiKey ? await window.aic.getApiKey() : null;
+  const headers = { ...options.headers };
+  if (key) headers["X-API-Key"] = key;
+  return fetch(url, { ...options, headers });
+};
+
 const exportData = async () => {
-  const res = await fetch("http://127.0.0.1:8000/export");
+  const res = await apiFetch("http://127.0.0.1:8000/export");
   if (!res.ok) return;
   const data = await res.json();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -17,7 +24,7 @@ const exportData = async () => {
 };
 
 const deleteAllData = async () => {
-  await fetch("http://127.0.0.1:8000/delete_all", { method: "POST" });
+  await apiFetch("http://127.0.0.1:8000/delete_all", { method: "POST" });
   if (window.aic && window.aic.sendDataDeleted) {
     window.aic.sendDataDeleted();
   }

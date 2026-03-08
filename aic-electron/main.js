@@ -134,11 +134,33 @@ ipcMain.handle("aic:select-path", async () => {
 
 let mainWindow = null;
 
+/** Path to API token file (shared with backend data directory). */
+const getApiTokenPath = () => {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "backend", "data", "api_token");
+  }
+  return path.join(__dirname, "..", "aic-backend", "data", "api_token");
+};
+
+ipcMain.handle("aic:get-api-key", async () => {
+  const tokenPath = getApiTokenPath();
+  try {
+    if (fs.existsSync(tokenPath)) {
+      return fs.readFileSync(tokenPath, "utf8").trim();
+    }
+  } catch (err) {
+    return null;
+  }
+  return null;
+});
+
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -162,10 +184,51 @@ const openSettingsWindow = () => {
     width: 400,
     height: 200,
     webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
       preload: path.join(__dirname, "preload.js"),
     },
   });
   win.loadFile(path.join(__dirname, "renderer", "settings.html"));
+};
+
+const openConnectionsGmailWindow = () => {
+  const win = new BrowserWindow({
+    width: 480,
+    height: 320,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+  win.loadFile(path.join(__dirname, "renderer", "connections-gmail.html"));
+};
+
+const openIngestWindow = () => {
+  const win = new BrowserWindow({
+    width: 480,
+    height: 420,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+  win.loadFile(path.join(__dirname, "renderer", "ingest.html"));
+};
+
+const openSecurityWindow = () => {
+  const win = new BrowserWindow({
+    width: 460,
+    height: 280,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+  win.loadFile(path.join(__dirname, "renderer", "security.html"));
 };
 
 const setApplicationMenu = () => {
@@ -173,7 +236,19 @@ const setApplicationMenu = () => {
     {
       label: "File",
       submenu: [
-        { label: "Settings", click: openSettingsWindow },
+        {
+          label: "Settings",
+          submenu: [
+            {
+              label: "Connections",
+              submenu: [{ label: "Gmail", click: openConnectionsGmailWindow }],
+            },
+            { label: "Security", click: openSecurityWindow },
+            { type: "separator" },
+            { label: "Ingest", click: openIngestWindow },
+            { label: "Data Controls", click: openSettingsWindow },
+          ],
+        },
       ],
     },
   ];

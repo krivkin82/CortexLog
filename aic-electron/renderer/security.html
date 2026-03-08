@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Security</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="security-settings">
+    <h1>Security</h1>
+    <div class="connection-section">
+      <label>Application password</label>
+      <p>This password protects access to stored secrets (e.g. Gmail token). Set it here; use the same password in Connections &gt; Gmail to view or edit the Gmail key.</p>
+      <input type="password" id="password-field" placeholder="Application password" />
+      <button id="save-password">Save</button>
+      <p id="save-toast" class="toast hidden">Password saved</p>
+    </div>
+    <div class="connection-section">
+      <button id="reset-password">Reset password</button>
+      <p id="reset-message" class="reset-info hidden"></p>
+    </div>
+    <script src="./crypto-utils.js"></script>
+    <script src="./security.js"></script>
+  </body>
+</html>
