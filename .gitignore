@@ -1,4 +1,4 @@
- Python
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -34,3 +34,6 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local copy of AI journal UI scaffold (not CortexLog source)
+AI-jouranl-interface-main/AI-journal-interface-main/
