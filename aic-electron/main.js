@@ -1,7 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, Menu, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 
 let backendProcess = null;
 let ollamaProcess = null;
@@ -144,15 +144,135 @@ const getApiTokenPath = () => {
 
 ipcMain.handle("aic:get-api-key", async () => {
   const tokenPath = getApiTokenPath();
+  // #region agent log
+  const tokenExists = fs.existsSync(tokenPath);
+  fetch('http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'57d7bc'},body:JSON.stringify({sessionId:'57d7bc',runId:'run2',hypothesisId:'H2',location:'main.js:getApiKey',message:'Reading API token',data:{tokenPath,tokenExists,isPackaged:app.isPackaged,resourcesPath:process.resourcesPath},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   try {
-    if (fs.existsSync(tokenPath)) {
-      return fs.readFileSync(tokenPath, "utf8").trim();
+    if (tokenExists) {
+      const token = fs.readFileSync(tokenPath, "utf8").trim();
+      // #region agent log
+      fetch('http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'57d7bc'},body:JSON.stringify({sessionId:'57d7bc',runId:'run2',hypothesisId:'H2',location:'main.js:getApiKey:found',message:'Token read',data:{tokenLength:token.length,tokenPreview:token.slice(0,4)+'...'},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return token;
     }
   } catch (err) {
     return null;
   }
   return null;
 });
+
+const copyRecursiveSync = (src, dest) => {
+  if (!fs.existsSync(src)) return;
+  const stat = fs.statSync(src);
+  if (stat.isDirectory()) {
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    for (const name of fs.readdirSync(src)) {
+      if (name === ".git") continue;
+      copyRecursiveSync(path.join(src, name), path.join(dest, name));
+    }
+  } else {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
+};
+
+const getSourceTemplateDir = () => {
+  const packaged = path.join(process.resourcesPath, "source-template");
+  if (fs.existsSync(packaged)) return packaged;
+  const dev = path.join(__dirname, "source-template");
+  if (fs.existsSync(dev)) return dev;
+  return null;
+};
+
+/**
+ * Ensure %userData%/source exists with template files and a Git repo (best-effort).
+ * @returns {string} absolute path to writable source folder
+ */
+const ensureWritableSourceCopy = () => {
+  const userData = app.getPath("userData");
+  const dest = path.join(userData, "source");
+  const template = getSourceTemplateDir();
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+  const marker = path.join(dest, ".cortexlog_source_initialized");
+  if (!fs.existsSync(marker) && template) {
+    copyRecursiveSync(template, dest);
+    try {
+      fs.writeFileSync(marker, new Date().toISOString(), "utf8");
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  let insideGit = false;
+  try {
+    execFileSync("git", ["-C", dest, "rev-parse", "--is-inside-work-tree"], {
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+    insideGit = true;
+  } catch (_) {
+    insideGit = false;
+  }
+  if (!insideGit) {
+    try {
+      execFileSync("git", ["init"], { cwd: dest, stdio: "ignore" });
+      execFileSync("git", ["-C", dest, "config", "user.email", "noreply@cortexlog.app"], {
+        stdio: "ignore",
+      });
+      execFileSync("git", ["-C", dest, "config", "user.name", "CortexLog"], { stdio: "ignore" });
+      execFileSync("git", ["-C", dest, "add", "-A"], { stdio: "ignore" });
+      try {
+        execFileSync(
+          "git",
+          ["-C", dest, "commit", "-m", "Initial CortexLog writable source copy", "--allow-empty"],
+          { stdio: "ignore" }
+        );
+      } catch (_) {
+        /* no files or git error */
+      }
+    } catch (_) {
+      /* git not installed */
+    }
+  }
+  return dest;
+};
+
+ipcMain.handle("aic:get-modify-source-root", async () => ensureWritableSourceCopy());
+
+const syncModifyEngineSourceFolder = async () => {
+  const sourceDir = ensureWritableSourceCopy();
+  const tokenPath = getApiTokenPath();
+  let key = null;
+  try {
+    if (fs.existsSync(tokenPath)) {
+      key = fs.readFileSync(tokenPath, "utf8").trim();
+    }
+  } catch (_) {
+    key = null;
+  }
+  const headers = { "Content-Type": "application/json" };
+  if (key) headers["X-API-Key"] = key;
+  for (let i = 0; i < 40; i += 1) {
+    try {
+      const h = await fetch("http://127.0.0.1:8000/health");
+      if (h.ok) break;
+    } catch (_) {
+      /* wait for backend */
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  try {
+    await fetch("http://127.0.0.1:8000/modify/engine/settings", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ source_folder: sourceDir }),
+    });
+  } catch (_) {
+    /* backend may still be starting */
+  }
+};
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -165,7 +285,17 @@ const createWindow = () => {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+  const useViteDev = process.env.VITE_DEV === "1";
+  if (useViteDev) {
+    mainWindow.loadURL("http://127.0.0.1:5173");
+  } else {
+    const distHtml = path.join(__dirname, "renderer-dist", "index.html");
+    if (fs.existsSync(distHtml)) {
+      mainWindow.loadFile(distHtml);
+    } else {
+      mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+    }
+  }
 
   mainWindow.on("maximize", () => {
     const display = screen.getDisplayMatching(mainWindow.getBounds());
@@ -179,76 +309,23 @@ const createWindow = () => {
   }
 };
 
-const openSettingsWindow = () => {
-  const win = new BrowserWindow({
-    width: 400,
-    height: 200,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-  win.loadFile(path.join(__dirname, "renderer", "settings.html"));
-};
-
-const openConnectionsGmailWindow = () => {
-  const win = new BrowserWindow({
-    width: 480,
-    height: 320,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-  win.loadFile(path.join(__dirname, "renderer", "connections-gmail.html"));
-};
-
-const openIngestWindow = () => {
-  const win = new BrowserWindow({
-    width: 480,
-    height: 420,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-  win.loadFile(path.join(__dirname, "renderer", "ingest.html"));
-};
-
-const openSecurityWindow = () => {
-  const win = new BrowserWindow({
-    width: 460,
-    height: 280,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-  win.loadFile(path.join(__dirname, "renderer", "security.html"));
-};
-
 const setApplicationMenu = () => {
   const template = [
     {
       label: "File",
+      submenu: [{ role: "quit" }],
+    },
+    {
+      label: "View",
       submenu: [
-        {
-          label: "Settings",
-          submenu: [
-            {
-              label: "Connections",
-              submenu: [{ label: "Gmail", click: openConnectionsGmailWindow }],
-            },
-            { label: "Security", click: openSecurityWindow },
-            { type: "separator" },
-            { label: "Ingest", click: openIngestWindow },
-            { label: "Data Controls", click: openSettingsWindow },
-          ],
-        },
+        ...(process.env.ELECTRON_DEV === "1"
+          ? [{ role: "reload" }, { role: "forceReload" }]
+          : []),
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
       ],
     },
   ];
@@ -262,12 +339,16 @@ ipcMain.on("aic:data-deleted", () => {
 });
 
 app.whenReady().then(() => {
+  ensureWritableSourceCopy();
   ensureOllamaRunning();
   ensureBackendRunning();
   monitorBackend();
   monitorOllama();
   setApplicationMenu();
   createWindow();
+  setTimeout(() => {
+    void syncModifyEngineSourceFolder();
+  }, 1200);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

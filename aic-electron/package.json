@@ -2,27 +2,56 @@
   "name": "aic-electron",
   "version": "0.1.0",
   "main": "main.js",
-  "description": "AIC MVP Electron shell",
+  "description": "CortexLog (local AI journal)",
   "scripts": {
+    "renderer:dev": "vite",
+    "renderer:build": "vite build",
+    "dev": "concurrently -k \"npm run renderer:dev\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_DEV=1 VITE_DEV=1 electron .\"",
     "start": "electron .",
-    "dev": "electron .",
-    "build": "electron-builder"
+    "build": "npm run renderer:build && electron-builder"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
     "electron": "^31.0.2",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11",
+    "wait-on": "^8.0.1"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "build": {
-    "appId": "com.aic.mvp",
+    "appId": "com.cortexlog.app",
+    "productName": "CortexLog",
+    "win": {
+      "signAndEditExecutable": false,
+      "signDlls": false,
+      "target": ["portable", "nsis"]
+    },
     "files": [
-      "**/*"
+      "main.js",
+      "preload.js",
+      "renderer-dist/**/*",
+      "package.json"
     ],
     "extraResources": [
       {
         "from": "../aic-backend/dist/aic-backend.exe",
         "to": "backend/aic-backend.exe"
+      },
+      {
+        "from": "source-template",
+        "to": "source-template"
       }
     ]
   }

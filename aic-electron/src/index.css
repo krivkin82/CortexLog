@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.96 0.03 90);
+  --foreground: oklch(0.28 0.03 55);
+  --muted: oklch(0.9 0.02 88);
+  --muted-foreground: oklch(0.5 0.03 55);
+  --accent: oklch(0.6 0.1 50);
+  --border: oklch(0.9 0.01 85);
+  --ring: oklch(0.65 0.08 45);
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Lora", Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground m-0 min-h-screen antialiased;
+    font-family: var(--font-sans);
+  }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.5 0.03 55 / 0.2) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: oklch(0.5 0.03 55 / 0.2);
+  border-radius: 3px;
+}
