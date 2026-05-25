@@ -1,3 +1,6 @@
+import urllib.error
+import urllib.request
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -6,8 +9,9 @@ from app.ingestion.local_files import ingest_local_paths, ingest_local_paths_str
 from app.ingestion.gmail import ingest_gmail_messages
 from app.ingestion.facebook_export import ingest_facebook_export
 from app.ingestion.youtube_export import ingest_youtube_export
-from app.llm.policy import detect_distress, is_workplace_prompt, normalize_mode
+from app.llm.policy import detect_distress, normalize_mode
 from app.llm.response import generate_response
+from app.llm.service import LLMUnavailableError
 from app.retrieval.search import retrieve
 from app.storage.chat import create_chat_message, delete_chat_message, list_chat_messages
 from app.storage.journal import (
@@ -42,6 +46,7 @@ from app.storage.llm_analysis import list_items_needing_analysis, list_items_wit
 from app.storage.conflicts import list_conflicts, update_conflict_status
 from app.storage.export import export_all
 from app.storage.admin import wipe_all_data
+from app.security.machine_key import get_machine_passphrase
 from app.security.secret_store import (
     get_secret,
     get_secret_with_key,
@@ -94,17 +99,85 @@ def auth_verify(request: VerifyPasswordRequest) -> dict:
 
 @router.get("/health/llm")
 def health_check_llm() -> dict:
-    """Check if Ollama is reachable and the configured model works (same path as analysis)."""
+    """Check if the configured LLM (local or cloud) can complete a tiny prompt."""
     try:
-        from app.llm.ollama_client import chat
-        from app.core.config import settings
-        chat(
-            [{"role": "user", "content": "Reply with exactly: ok"}],
-            model=settings.ollama_model,
-        )
+        from app.llm.service import LLMUnavailableError, chat_completion
+
+        chat_completion([{"role": "user", "content": "Reply with exactly: ok"}])
         return {"status": "ok"}
+    except LLMUnavailableError as e:
+        return {"status": "offline", "error": str(e)}
     except Exception as e:
         return {"status": "offline", "error": str(e)}
+
+
+# --- Legacy OpenAI settings aliases (prefer /llm/settings and /llm/test) ---
+
+
+class OpenAIConfigureRequest(BaseModel):
+    api_key: str
+    ai_model: str | None = None
+
+
+@router.get("/openai/status")
+def openai_status_alias() -> dict:
+    from app.llm.llm_settings import LEGACY_SECRET_OPENAI, SECRET_KEY_OPENAI, get_llm_settings_dict
+
+    llm = get_llm_settings_dict()
+    passphrase = get_machine_passphrase()
+    key = get_secret(SECRET_KEY_OPENAI, passphrase=passphrase) or get_secret(
+        LEGACY_SECRET_OPENAI, passphrase=passphrase
+    )
+    return {
+        "configured": bool(key and str(key).strip()),
+        "model": llm.get("cloud_model") or "gpt-4o-mini",
+    }
+
+
+@router.post("/openai/configure")
+def openai_configure_alias(request: OpenAIConfigureRequest) -> dict:
+    from app.llm.llm_settings import SECRET_KEY_OPENAI, get_llm_settings_dict, save_llm_settings_dict
+
+    passphrase = get_machine_passphrase()
+    store_secret(SECRET_KEY_OPENAI, request.api_key.strip(), passphrase=passphrase)
+    llm = get_llm_settings_dict()
+    llm["model_source"] = "cloud"
+    llm["cloud_provider"] = "openai"
+    if request.ai_model and request.ai_model.strip():
+        llm["cloud_model"] = request.ai_model.strip()
+    save_llm_settings_dict(llm)
+    return {"ok": True}
+
+
+@router.post("/openai/test")
+def openai_test_alias() -> dict:
+    from app.llm.llm_settings import (
+        LEGACY_SECRET_OPENAI,
+        SECRET_KEY_OPENAI,
+        get_llm_settings_dict,
+        openai_chat_inference,
+    )
+    from app.llm.providers.openai_provider import OpenAIProvider
+
+    llm = get_llm_settings_dict()
+    passphrase = get_machine_passphrase()
+    key = get_secret(SECRET_KEY_OPENAI, passphrase=passphrase) or get_secret(
+        LEGACY_SECRET_OPENAI, passphrase=passphrase
+    )
+    if not key or not str(key).strip():
+        raise HTTPException(status_code=400, detail="OpenAI API key not configured")
+    model = llm.get("cloud_model") or "gpt-4o-mini"
+    ot, omax = openai_chat_inference(llm)
+    try:
+        text = OpenAIProvider(str(key).strip()).chat(
+            [{"role": "user", "content": "Reply with one short sentence confirming the connection."}],
+            model=str(model),
+            temperature=ot,
+            max_tokens=min(omax, 256),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="OpenAI request failed.") from e
+    return {"ok": True, "detail": (text or "")[:2000]}
 
 
 class LocalIngestRequest(BaseModel):
@@ -256,23 +329,22 @@ def journal_reflect(request: JournalReflectRequest | None = None) -> dict:
         raise HTTPException(status_code=400, detail="Journal entry has no content")
     retrieval_result = retrieve(entry_content, limit=3)
     retrieved_context = [m["content"] for m in retrieval_result.get("matches", [])]
-    from app.llm.response import _build_system_prompt
-    from app.llm.ollama_client import chat
-
-    system = _build_system_prompt("journal", retrieved_context)
-    system += "\n\nReflect briefly and supportively on this journal entry only. Do not diagnose."
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": f"Reflect on this journal entry:\n\n{entry_content}"},
-    ]
+    reflect_prompt = (
+        "Reflect on this journal entry only. Name explicit themes or tensions, "
+        "connect ideas where it helps, and offer a concise synthesis—no platitudes. "
+        "Do not diagnose. Do not end with a stock question about feelings; substance first.\n\n"
+        f"{entry_content}"
+    )
     try:
-        text = chat(messages)
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="LLM unavailable. Is Ollama running?",
+        payload = generate_response(
+            reflect_prompt,
+            "journal",
+            retrieved_context=retrieved_context,
+            session_id=None,
         )
-    reflection_text = text or ""
+    except LLMUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    reflection_text = payload.get("text") or ""
     update_journal_reflection(entry_id, reflection_text)
     return {"text": reflection_text, "entry_id": entry_id}
 
@@ -315,8 +387,6 @@ def post_chat_message(request: ChatRequest) -> dict:
     mode = normalize_mode(request.mode)
     if detect_distress(request.content):
         mode = "crisis"
-    elif mode == "journal" and is_workplace_prompt(request.content):
-        mode = "advisor_workplace"
 
     user_message = create_chat_message(
         role="user",
@@ -347,11 +417,13 @@ def post_chat_message(request: ChatRequest) -> dict:
             retrieved_context=[match["content"] for match in retrieval_result.get("matches", [])],
             session_id=request.session_id,
         )
-    except Exception:
+    except LLMUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except Exception as e:
         raise HTTPException(
             status_code=503,
-            detail="LLM unavailable. Is Ollama running?",
-        )
+            detail="LLM unavailable. Check AI settings.",
+        ) from e
     response_text = response_payload["text"]
     assistant_message = create_chat_message(
         role="assistant",
@@ -599,3 +671,68 @@ def get_settings(key: str) -> dict:
 def update_settings(request: SettingsUpdateRequest) -> dict:
     set_setting(request.key, request.value)
     return {"ok": True}
+
+
+# --- CortexLog V2: OpenAI provider (local encrypted secret, never returned to client) ---
+
+OPENAI_SECRET_KEY = "openai_api_key"
+AI_SETTINGS_KEY = "cortexlog_ai"
+
+
+class OpenAIConfigureRequest(BaseModel):
+    api_key: str
+    ai_model: str = "gpt-4o-mini"
+
+
+@router.get("/openai/status")
+def openai_status() -> dict:
+    """Whether an OpenAI key is stored locally; model from settings (no raw key)."""
+    passphrase = get_machine_passphrase()
+    stored = get_secret(OPENAI_SECRET_KEY, passphrase=passphrase)
+    setting = get_setting(AI_SETTINGS_KEY)
+    model = "gpt-4o-mini"
+    if setting and setting.get("value") and isinstance(setting["value"], dict):
+        model = setting["value"].get("ai_model") or model
+    return {"configured": bool(stored), "model": model}
+
+
+@router.post("/openai/configure")
+def openai_configure(request: OpenAIConfigureRequest) -> dict:
+    """Store API key encrypted on disk; update provider settings JSON."""
+    key = (request.api_key or "").strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="API key is required")
+    passphrase = get_machine_passphrase()
+    store_secret(OPENAI_SECRET_KEY, key, passphrase=passphrase)
+    set_setting(
+        AI_SETTINGS_KEY,
+        {
+            "ai_provider": "openai",
+            "ai_model": (request.ai_model or "gpt-4o-mini").strip(),
+            "use_local_model": False,
+        },
+    )
+    return {"ok": True}
+
+
+@router.post("/openai/test")
+def openai_test() -> dict:
+    """Verify stored key against OpenAI (no key echoed)."""
+    passphrase = get_machine_passphrase()
+    api_key = get_secret(OPENAI_SECRET_KEY, passphrase=passphrase)
+    if not api_key:
+        raise HTTPException(status_code=400, detail="OpenAI API key not configured")
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/models",
+        headers={"Authorization": f"Bearer {api_key}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            if resp.status == 200:
+                return {"ok": True, "status": "connected"}
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "status": "error", "detail": e.reason or str(e.code)}
+    except Exception as e:
+        return {"ok": False, "status": "error", "detail": str(e)}
+    return {"ok": False, "status": "error", "detail": "unknown"}

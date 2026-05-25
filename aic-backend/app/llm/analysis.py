@@ -8,8 +8,7 @@ import logging
 import re
 from typing import Any
 
-from app.core.config import settings
-from app.llm.ollama_client import chat
+from app.llm.service import LLMUnavailableError, chat_completion, resolve_runtime_label
 from app.storage.categories import link_item_category, ensure_category
 from app.storage.entities import create_entity, find_entity, list_entities_by_label
 from app.storage.conflicts import create_conflict
@@ -99,7 +98,7 @@ def analyze_item(item_id: str, chunks: list[str], item_path: str | None = None) 
         logger.warning("analyze_item: no content for item %s", item_id)
         return False
 
-    run_id = create_run(item_id, settings.ollama_model, "started")
+    run_id = create_run(item_id, resolve_runtime_label(), "started")
 
     try:
         user_prompt = ANALYSIS_USER_TEMPLATE.format(
@@ -110,7 +109,10 @@ def analyze_item(item_id: str, chunks: list[str], item_path: str | None = None) 
             {"role": "system", "content": ANALYSIS_SYSTEM},
             {"role": "user", "content": user_prompt},
         ]
-        raw = chat(messages, format="json")
+        try:
+            raw = chat_completion(messages, json_output=True)
+        except LLMUnavailableError:
+            raise
         data = _extract_json(raw)
 
         if not data:
@@ -201,6 +203,9 @@ def analyze_item(item_id: str, chunks: list[str], item_path: str | None = None) 
         update_run_status(run_id, "completed")
         return True
 
+    except LLMUnavailableError:
+        update_run_status(run_id, "failed")
+        raise
     except Exception as e:
         logger.exception("analyze_item failed for %s: %s", item_id, e)
         update_run_status(run_id, "failed")

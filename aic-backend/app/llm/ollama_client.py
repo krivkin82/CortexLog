@@ -26,13 +26,30 @@ def generate(prompt: str, model: str | None = None, system: str | None = None, f
     return getattr(response, "response", "") or ""
 
 
-def chat(messages: list[dict], model: str | None = None, format: str | None = None) -> str:
+def chat(
+    messages: list[dict],
+    model: str | None = None,
+    format: str | None = None,
+    *,
+    temperature: float | None = None,
+    num_predict: int | None = None,
+) -> str:
     """
     Call Ollama chat endpoint. messages format: [{"role": "user"|"assistant"|"system", "content": "..."}]
     Returns the assistant's reply content.
     """
     client = get_client()
     model = model or settings.ollama_model
-    response = client.chat(model=model, messages=messages, format=format or "")
+    kwargs: dict = {"model": model, "messages": messages}
+    if format:
+        kwargs["format"] = format
+    opts: dict = {}
+    if temperature is not None:
+        opts["temperature"] = temperature
+    if num_predict is not None:
+        opts["num_predict"] = num_predict
+    if opts:
+        kwargs["options"] = opts
+    response = client.chat(**kwargs)
     msg = getattr(response, "message", None)
     return getattr(msg, "content", "") if msg else ""

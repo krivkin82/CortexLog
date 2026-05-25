@@ -2,11 +2,10 @@ import sqlite3
 from pathlib import Path
 from typing import Iterable
 
+from app.core.config import DATA_DIR
 from app.storage.schema import MIGRATION_STATEMENTS, SCHEMA_STATEMENTS
 
-DEFAULT_DB_PATH = (
-    Path(__file__).resolve().parents[2] / "data" / "aic.db"
-)
+DEFAULT_DB_PATH = DATA_DIR / "aic.db"
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:

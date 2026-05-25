@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
 from typing import Optional
 
+from app.core.config import DATA_DIR
 from app.security.encryption import (
     decrypt_text,
     decrypt_with_derived_key,
@@ -9,7 +9,7 @@ from app.security.encryption import (
     encrypt_with_derived_key,
 )
 
-SECRETS_PATH = Path(__file__).resolve().parents[2] / "data" / "secrets.json"
+SECRETS_PATH = DATA_DIR / "secrets.json"
 
 
 def _load_secrets() -> dict:

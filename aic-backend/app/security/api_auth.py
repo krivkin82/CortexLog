@@ -2,15 +2,14 @@
 
 import os
 import secrets
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Header, HTTPException, Request
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+from app.core.config import DATA_DIR
+
 API_TOKEN_PATH = DATA_DIR / "api_token"
 
-# Header names we accept for API key
 API_KEY_HEADER = "X-API-Key"
 AUTH_HEADER = "Authorization"
 
@@ -25,7 +24,7 @@ def _ensure_token() -> str:
     try:
         os.chmod(API_TOKEN_PATH, 0o600)
     except OSError:
-        pass  # Windows may not support chmod the same way
+        pass
     return token
 
 
