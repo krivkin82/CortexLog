@@ -71,21 +71,22 @@ Electron reads the API token from the same path when running in dev:
 |------|------|
 | `aic-electron/main.js` | `ipcMain.handle("aic:get-api-key")` reads token from `aic-backend/data/api_token` |
 | `aic-electron/preload.js` | Exposes `window.aic.getApiKey()` |
-| `aic-electron/renderer/*.js` | Use `apiFetch()` (adds `X-API-Key`) for all backend calls |
+| `aic-electron/src/lib/api.ts` | Centralized `apiFetch()` and helpers for authenticated backend calls |
+| `aic-electron/src/components/*.tsx` | UI surfaces call backend routes through `src/lib/api.ts` |
 
 ### Client-side crypto
 
 | File | Role |
 |------|------|
-| `aic-electron/renderer/crypto-utils.js` | `deriveFernetKey(password, salt)`, `hashPasswordForVerify(password, salt)` – must match backend PBKDF2/SHA-256 |
+| `aic-electron/src/components/ProviderSettings.tsx` | Provider key configuration and connection test UI; key entry never logs secret values |
 
 ### Settings menu and windows
 
 | Item | File | Role |
 |------|------|------|
-| File > Settings > Connections > Gmail | `connections-gmail.html`, `connections-gmail.js` | Unlock with password, view/edit Gmail token, save to secret store |
-| File > Settings > Security | `security.html`, `security.js` | Set application password (hash), Reset (placeholder message) |
-| File > Settings > Data Controls | `settings.html`, `settings.js` | Export, Delete All |
+| File > Settings | `aic-electron/main.js`, `aic-electron/src/App.tsx` | Opens the in-app settings surface |
+| AI provider settings | `aic-electron/src/components/ProviderSettings.tsx` | Configure/test provider and model selection |
+| Mode UI | `aic-electron/src/components/*.tsx` | Journal / Explore / Modify mode panels in the React renderer |
 
 ### Gmail token flow
 
@@ -137,10 +138,9 @@ All `BrowserWindow`s use:
 |-----------------|------|
 | API token generation/location | `api_auth.py`, `main.js` (getApiTokenPath) |
 | Salt or password hash storage | `auth_data.py` |
-| Encryption algorithm | `encryption.py`, `crypto-utils.js` (keep in sync) |
+| Encryption algorithm | `encryption.py` and matching client request flow under `aic-electron/src/` |
 | New secret type | Use `gmail_access_token` pattern; add key constant and UI |
 | Auth API routes | `aic-backend/app/api/routes.py` |
-| Gmail token UI | `connections-gmail.html`, `connections-gmail.js` |
-| Security window | `security.html`, `security.js` |
-| Main window settings / ingest | `renderer.js`, `index.html` |
-| All backend fetches | Use `apiFetch()`; add `X-API-Key` via preload `getApiKey()` |
+| Settings UI | `aic-electron/src/App.tsx`, `aic-electron/src/components/ProviderSettings.tsx` |
+| Main renderer shell | `aic-electron/src/main.tsx`, `aic-electron/src/App.tsx`, `aic-electron/src/index.css` |
+| All backend fetches | Use `aic-electron/src/lib/api.ts`; include `X-API-Key` via preload `getApiKey()` |

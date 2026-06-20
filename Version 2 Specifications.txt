@@ -1,0 +1,1324 @@
+Project: CortexLog MVP — Local AI Journal with Modify Mode
+
+Goal:
+Rebuild/simplify the current AI Companion / CortexLog prototype into a local-first Electron app with three primary modes:
+
+1. Journal
+2. Explore
+3. Modify
+
+The current implementation contains broader functionality including Gmail/Facebook/YouTube ingestion, knowledge map, proposed insights, entities/relations/provenance, local Ollama, and broader retrieval logic. For this MVP, remove those surfaces and focus on a beautiful AI-powered journal, an Explore chat mode, and a local Modify mode that lets the user request app changes from inside the app. The existing app already uses Electron + FastAPI + SQLite + local token auth + journal/chat storage, so preserve useful foundations but simplify the product surface. The current app has journal/chat routes, SQLite persistence, local API-token middleware, secrets/settings endpoints, and Electron renderer/preload structure that can be reused or simplified.
+
+Primary product thesis:
+CortexLog is a local AI-native journal that can talk back to the user and can safely evolve itself through user-directed local modifications.
+
+Core modes:
+- Journal: reflective writing + LLM response
+- Explore: chat-like thinking surface
+- Modify: user requests changes to the app itself
+
+Do not implement Proposed Insights, Knowledge Map, Gmail ingestion, Facebook ingestion, YouTube ingestion, or external connectors for this MVP.
+
+Use the v0-generated UI as the visual/frontend basis. Port it into the Electron renderer or equivalent frontend structure.
+
+Architecture:
+- Electron desktop shell
+- Frontend UI based on v0 React/Next-style design, adapted for Electron
+- Local backend service for persistence, LLM calls, and Modify orchestration
+- SQLite local database
+- Local encrypted secret storage for OpenAI API key
+- Local Git repository used internally for restore points and rollback
+- Cursor CLI used as the first implementation of the local code modification runner: https://cursor.com/docs/cli/overview
+- Create abstraction so Cursor CLI can later be replaced with Cursor SDK without changing product-level workflows
+
+Important design principle:
+The user should not feel like they are editing code. Modify mode should feel like calm app housekeeping:
+“What should CortexLog become next?”
+
+The user approves intent and impact, not raw source code.
+
+------------------------------------------------------------
+1. Top-level user experience
+------------------------------------------------------------
+
+The app has three modes:
+
+Journal | Explore | Modify
+
+Mode toggle:
+- Maintain consistent mode switching across the app
+- Prefer a consistent top-center toggle: Journal • Explore • Modify
+
+Journal mode:
+- Warm off-white background
+- Serif font, such as Lora
+- Wider writing space than the earlier narrow prototype
+- Centered, calm, notebook-like layout
+- User writes an entry
+- LLM responds reflectively
+- Journal entry and LLM reflection are saved
+- Journal content is treated as high-signal long-term context
+
+Explore mode:
+- Slightly cooler background
+- Clean sans-serif font, such as Inter
+- Chat-like behavior
+- No chat bubbles
+- No avatars
+- Messages stack as clean text blocks with generous spacing
+- Single input line at bottom with subtle underline/focus treatment
+- Explore messages are stored locally
+- Explore content may influence future context, but with lower default weight than Journal
+
+Modify mode:
+- Calm two-panel layout
+- Left panel: request input
+- Right panel: proposed change / impact summary / actions
+- Bottom global controls: restore point, undo, history
+
+Modify left panel:
+Prompt:
+“What would you like to change?”
+
+Examples:
+- “Add document upload to Explore mode”
+- “Add dark mode”
+- “Let me search for entries based on keywords”
+
+Hint:
+“Describe the outcome”
+
+Modify right panel:
+Shows proposed change after user submits a request.
+
+Example title:
+“Add document upload to Explore mode”
+
+Description:
+“This change would let you attach documents during Explore conversations so the AI can discuss, summarize, or reason about the file in context.”
+
+Model analysis:
+Impact:
+- UI: adds upload button
+- Data: stores file locally
+- Safety: no existing data modified
+
+Actions:
+- Apply
+- Reject
+- Edit
+
+Bottom global controls:
+- Create restore point
+- Undo last change
+- View history
+
+------------------------------------------------------------
+2. LLM provider connection
+------------------------------------------------------------
+
+Implement OpenAI first using a swappable provider interface.
+
+Do not hard-code OpenAI calls throughout the app. Create an LLM provider abstraction.
+
+Suggested structure:
+
+LLMProvider interface:
+- generateResponse(messages, options)
+- generateStructuredOutput(prompt/schema/options)
+- getProviderStatus()
+
+Provider implementations:
+- OpenAIProvider now
+- OllamaProvider later
+- AnthropicProvider/GeminiProvider later if desired
+
+Settings:
+- ai_provider: "openai"
+- ai_model: configurable
+- use_local_model: false
+
+Secrets:
+- openai_api_key stored encrypted locally
+- frontend should never receive the raw API key after initial entry
+- backend should use decrypted key only when making provider calls
+- do not log API keys
+- do not include API key in error messages
+
+Settings UI:
+- Add AI Provider settings screen or modal
+- Let user enter/update OpenAI API key
+- Let user test connection
+- Show status:
+  Connected / Not configured / Error
+
+Privacy language in UI:
+“Journal content is stored locally. When cloud AI is enabled, relevant text is sent to the selected AI provider to generate responses.”
+
+------------------------------------------------------------
+3. Data model
+------------------------------------------------------------
+
+Use SQLite.
+
+Create or simplify tables around the MVP.
+
+journal_entries:
+- id
+- user_content
+- assistant_response
+- created_at
+- updated_at
+- deleted_at nullable
+- metadata_json nullable
+
+explore_messages:
+- id
+- session_id
+- role: user | assistant | system
+- content
+- created_at
+- metadata_json nullable
+
+memories:
+- id
+- source_type: journal | explore | manual | system
+- source_id nullable
+- content
+- weight: integer or float
+- status: active | archived | rejected
+- created_at
+- updated_at
+- metadata_json nullable
+
+app_settings:
+- key
+- value_json
+- updated_at
+
+secrets:
+- key
+- encrypted_value
+- created_at
+- updated_at
+
+change_requests:
+- id
+- user_prompt
+- interpreted_goal
+- category
+- strategy
+- risk_level
+- status
+- summary_for_user
+- technical_summary
+- impact_json
+- safety_json
+- git_commit_before
+- git_commit_after
+- working_branch
+- created_at
+- proposed_at
+- applied_at
+- rejected_at
+- reverted_at
+- error_message nullable
+
+change_files:
+- id
+- change_request_id
+- file_path
+- change_type: added | modified | deleted | renamed
+- allowed: boolean
+- reason nullable
+
+change_events:
+- id
+- change_request_id
+- event_type
+- message
+- created_at
+- metadata_json nullable
+
+attachments:
+- id
+- source_type: explore | journal
+- source_id nullable
+- original_filename
+- local_path
+- mime_type
+- size_bytes
+- created_at
+- metadata_json nullable
+
+Do not implement heavy knowledge graph/provenance/proposed insights in this MVP.
+
+------------------------------------------------------------
+4. Modify mode concept
+------------------------------------------------------------
+
+Modify mode is not a free-for-all agent. It is a controlled local change pipeline.
+
+Flow:
+1. User enters change request
+2. System creates change_request row
+3. LLM interprets request
+4. LLM proposes:
+   - category
+   - strategy
+   - risk level
+   - impact summary
+   - expected files/areas
+5. Harness validates proposed classification
+6. Harness creates restore point
+7. Harness invokes Cursor CLI locally to generate patch
+8. Harness inspects resulting file changes
+9. Harness runs checks
+10. UI shows proposed change summary
+11. User chooses Apply / Reject / Edit
+12. If applied, commit change
+13. If rejected, discard branch/working changes
+14. User can undo via restore point
+
+The LLM may classify, but the harness enforces.
+
+Never rely only on prompt instructions. Use deterministic checks:
+- file allowlists
+- file denylists
+- diff inspection
+- dependency checks
+- build/test checks
+- secret scan
+- database file protection
+- route/action protection
+
+------------------------------------------------------------
+5. Change type categories
+------------------------------------------------------------
+
+Implement these categories.
+
+Category A: Appearance / theme customization
+
+Examples:
+- “Make the journal text wider”
+- “Make the app feel more like a notebook”
+- “Add dark mode”
+- “Make the font larger”
+- “Reduce visual clutter”
+
+Preferred strategy:
+- Overlay/settings if possible
+- CSS/theme/component changes if needed
+
+Risk:
+- Low
+
+Allowed areas:
+- renderer UI components
+- CSS/theme files
+- frontend config
+- app_settings
+- local user preferences
+
+Blocked areas:
+- database schema
+- journal data files
+- secrets
+- auth
+- delete/export behavior
+- network calls
+- dependencies unless explicitly approved
+
+Workflow:
+- For simple settings-like changes, prefer creating/using settings rather than hard-coding one-off changes
+- If user requests a common preference, implement it as a setting where reasonable
+- Example: font size should become a settings control
+
+Checks:
+- frontend build passes
+- no protected files touched
+- no new dependencies unless explicitly approved
+
+Category B: UI behavior customization
+
+Examples:
+- “Add keyboard shortcut to switch modes”
+- “Let me collapse the assistant response”
+- “Remember which mode I was in last time”
+- “Add a settings bar”
+
+Preferred strategy:
+- Source-code patch or settings overlay
+
+Risk:
+- Low to medium
+
+Allowed areas:
+- frontend components
+- local settings
+- preload IPC only if needed and safe
+
+Blocked areas:
+- journal deletion
+- auth/security
+- secrets
+- export/delete-all
+- arbitrary filesystem access
+
+Workflow:
+- Generate proposed behavior summary
+- Explain whether it affects stored data
+- Preview-first
+- Build/test before apply
+
+Category C: Read-only data views
+
+Examples:
+- “Let me search journal entries by keyword”
+- “Show previous journal entries”
+- “Add a timeline view”
+- “Let me filter entries by date”
+
+Preferred strategy:
+- Source-code patch
+- May add read-only backend endpoints
+- May add indexes if safe
+
+Risk:
+- Medium
+
+Allowed areas:
+- frontend views
+- read-only backend routes
+- query functions
+- SQLite indexes/migrations that do not alter existing data content
+
+Blocked areas:
+- destructive delete/update behavior
+- automatic rewriting of journal entries
+- export without confirmation
+- remote upload
+
+Workflow:
+- Require restore point
+- Require database backup before any schema/index migration
+- Require plain-language impact:
+  “This adds a read-only view of existing entries. It does not modify journal content.”
+
+Checks:
+- migration safe check
+- no destructive SQL
+- tests/build pass
+
+Category D: Local feature addition
+
+Examples:
+- “Add document upload to Explore mode”
+- “Let me attach a file to a journal entry”
+- “Add tags to entries”
+- “Let me pin important entries”
+
+Preferred strategy:
+- Source-code patch
+
+Risk:
+- Medium
+
+Allowed areas:
+- frontend components
+- backend endpoints
+- SQLite schema additions
+- local storage folders under app data directory
+
+Blocked areas:
+- automatic cloud upload
+- deleting local files
+- sending attachments to LLM without user confirmation
+- modifying existing journal content without explicit user action
+
+Workflow:
+- Require restore point
+- Require database backup if schema changes
+- Require impact summary
+- Require user approval before apply
+- For attachments, explicitly state:
+  - where files are stored
+  - whether content is sent to OpenAI
+  - whether existing journal data is changed
+
+Checks:
+- no protected files touched unless expected
+- no destructive migration
+- file storage path must be inside controlled app data directory
+- build/test pass
+
+Category E: Prompt / behavior tuning
+
+Examples:
+- “Make Journal responses warmer”
+- “Make Explore more direct”
+- “Stop asking so many questions”
+- “Respond more like a mentor”
+
+Preferred strategy:
+- Settings/prompt configuration
+- Avoid source changes if prompt files/settings can handle it
+
+Risk:
+- Low to medium
+
+Allowed areas:
+- prompt templates
+- mode settings
+- app_settings
+- frontend settings UI
+
+Blocked areas:
+- safety prompt removal
+- crisis/distress handling removal
+- secret handling
+- provider key handling
+
+Workflow:
+- Show proposed personality/behavior change
+- Let user test with a sample
+- Apply as setting if possible
+
+Checks:
+- safety prompt remains present
+- distress handling remains enabled
+- no provider/auth changes
+
+Category F: LLM provider/model configuration
+
+Examples:
+- “Let me switch from OpenAI to local Ollama”
+- “Add Gemini as an option”
+- “Use a cheaper model for Explore”
+
+Preferred strategy:
+- Provider interface extension
+- Settings additions
+
+Risk:
+- Medium to high
+
+Allowed areas:
+- LLM provider abstraction
+- settings UI
+- encrypted secrets
+- provider config
+
+Blocked areas:
+- exposing keys to renderer
+- logging keys
+- storing keys unencrypted
+- hard-coding provider secrets
+- sending journal content to a new provider without user consent
+
+Workflow:
+- Always show privacy impact
+- Require explicit approval for any new cloud provider
+- Require connection test
+
+Checks:
+- no raw secret in frontend
+- no secret in logs
+- provider interface remains swappable
+- cloud AI warning present
+
+Category G: Data mutation / deletion / export
+
+Examples:
+- “Let me delete old entries”
+- “Add export to markdown”
+- “Wipe all data”
+- “Auto-clean old Explore chats”
+
+Preferred strategy:
+- Usually block for early MVP unless explicitly implementing data controls
+
+Risk:
+- High
+
+Allowed only with elevated confirmation:
+- new data controls UI
+- explicit confirmation
+- backup before destructive action
+- undo if feasible
+
+Blocked by default:
+- automatic deletion
+- silent export
+- remote upload
+- changing existing journal entries in bulk
+- delete_all route changes
+
+Workflow:
+- Require elevated confirmation phrase or multi-step confirmation
+- Require backup
+- Require clear impact summary:
+  “This can permanently remove local journal data.”
+
+For MVP:
+- Do not allow Cursor agent to implement destructive data behavior unless the user explicitly confirms an elevated flow
+- Prefer to defer these requests with a safe response:
+  “This request affects stored journal data. For this MVP, destructive data changes require a dedicated Data Controls workflow.”
+
+Category H: Auth / security / secrets
+
+Examples:
+- “Remove password prompt”
+- “Show me my API key”
+- “Disable security”
+- “Make it easier to access secrets”
+
+Risk:
+- Critical
+
+Default:
+- Block
+
+Allowed only:
+- changing UI copy around security
+- adding secure provider settings flow
+- improving secret storage
+- test connection without exposing key
+
+Blocked:
+- exposing keys
+- removing encryption
+- bypassing auth
+- weakening local token middleware
+- logging secrets
+- storing secrets in plain text
+
+Workflow:
+- Return safe refusal or require explicit advanced mode
+- For MVP, do not allow self-modification of auth/secrets except narrowly scoped provider setup
+
+Category I: Dependency / package changes
+
+Examples:
+- “Add PDF parsing”
+- “Add rich text editor”
+- “Use a calendar component”
+
+Risk:
+- Medium to high
+
+Default:
+- Require explicit approval
+
+Workflow:
+- Agent must identify new dependencies
+- UI must show:
+  - dependency name
+  - purpose
+  - package manager action
+- User must approve dependency install separately
+
+Checks:
+- package diff detected
+- lockfile diff detected
+- no install scripts from suspicious packages without warning
+- build passes
+
+Category J: External integrations / network features
+
+Examples:
+- “Connect my Google Drive”
+- “Sync to Dropbox”
+- “Send entries to email”
+- “Publish my journal”
+
+Risk:
+- High
+
+Default:
+- Block/defer for MVP
+
+Allowed:
+- local-only document upload
+- explicit OpenAI provider connection already defined
+- possibly local export after user confirmation
+
+Blocked:
+- OAuth integrations
+- auto-sync
+- posting/sending externally
+- background upload
+
+Workflow:
+- Return:
+  “This requires an external integration and privacy/security design. For MVP, Modify mode can create local-only features but should not add new external integrations automatically.”
+
+------------------------------------------------------------
+6. Harness enforcement
+------------------------------------------------------------
+
+Create a Modify Harness service.
+
+Responsibilities:
+- classify requests
+- validate classification
+- create restore points
+- run Cursor CLI
+- inspect diffs
+- run checks
+- generate user-facing summary
+- apply/reject/revert changes
+- write change history
+
+Suggested modules:
+
+modify/
+- modify_service.py or modifyService.ts
+- classifier.py / classifier.ts
+- policy.py / policy.ts
+- git_manager.py / gitManager.ts
+- cursor_runner.py / cursorRunner.ts
+- diff_inspector.py / diffInspector.ts
+- checks.py / checks.ts
+- schemas.py / types.ts
+
+Protected paths:
+- local app data directory
+- SQLite database files
+- secret store files
+- API token files
+- auth/security modules
+- delete/export/wipe routes
+- production environment files
+- .env files
+- private key files
+- package manager config unless dependency approval exists
+
+Example protected patterns:
+- **/data/**
+- **/*.sqlite
+- **/*.db
+- **/secrets/**
+- **/.env*
+- **/auth/**
+- **/security/**
+- routes containing delete_all
+- routes containing export
+- code that handles API keys
+- code that decrypts secrets
+
+Allowed UI paths for low-risk changes:
+- aic-electron/src/**
+- app/page.tsx
+- components/**
+- styles/**
+- globals.css
+- tailwind.config.*
+- theme files
+- prompt config files, if separate and safe
+
+Diff inspection:
+- Get changed files after agent run
+- Classify each changed file
+- Check against category allowlist/denylist
+- Reject or escalate if unexpected files changed
+
+Secret scanning:
+- Scan generated diff for:
+  - OpenAI keys
+  - API key patterns
+  - “sk-”
+  - .env contents
+  - tokens/passwords
+- Block if found
+
+Dangerous operation scanning:
+- Detect destructive SQL:
+  - DROP TABLE
+  - DELETE FROM journal_entries without explicit safe route
+  - UPDATE journal_entries bulk operations
+- Detect filesystem deletion:
+  - rm -rf
+  - unlink/rmdir operations
+  - recursive deletes
+- Detect outbound network additions:
+  - fetch/axios to non-provider domains
+  - new OAuth endpoints
+  - cloud upload logic
+
+Dependency scanning:
+- Detect changes to:
+  - package.json
+  - package-lock.json
+  - pnpm-lock.yaml
+  - yarn.lock
+  - requirements.txt
+  - pyproject.toml
+- If category does not allow dependency changes, block
+- If allowed, require dependency approval
+
+Build/test checks:
+- Run frontend build/check
+- Run backend tests where available
+- Run lint/typecheck if available
+- Minimum:
+  - npm run build or equivalent
+  - npm run lint if present
+  - python tests if present
+- If no tests exist, record “No tests configured” and require extra user confirmation for medium/high risk changes
+
+------------------------------------------------------------
+7. Git / rollback model
+------------------------------------------------------------
+
+Use Git internally.
+
+On app startup:
+- Check whether app directory is a Git repo
+- If not, initialize Git
+- Create initial baseline commit
+- Do not include local data/secrets in Git
+- Ensure .gitignore excludes:
+  - SQLite DB
+  - local data
+  - secrets
+  - logs
+  - uploaded attachments
+  - .env
+  - API token files
+  - node_modules
+  - Python venv
+
+Restore point flow:
+- Before any Modify run, ensure clean or manageable working tree
+- Create restore point commit
+- Store commit hash in change_request.git_commit_before
+- Run changes on a temporary branch or working branch:
+  modify/request-{id}
+- After patch generation and checks, keep changes staged/proposed
+- If user applies, commit with message:
+  “Apply Modify request {id}: {short goal}”
+- Store commit hash in git_commit_after
+- If user rejects, reset branch to git_commit_before or discard branch
+- If user clicks undo, revert to git_commit_before or create a revert commit
+
+Important:
+- User never needs to see Git terminology by default
+- UI labels:
+  - Create restore point
+  - Apply
+  - Undo last change
+  - Restore previous version
+  - View history
+- Technical details can show commit hashes
+
+Dirty working tree edge case:
+If there are uncommitted changes before Modify:
+- Option A: create restore point including current state
+- Option B: ask user:
+  “CortexLog has existing local changes. Create a restore point before continuing?”
+For MVP, auto-create restore point.
+
+Broken app edge case:
+If app fails to start after a change:
+- Provide external recovery script:
+  restore-last-good.bat
+- Script resets to last known good commit
+- Store last known good commit in a simple file:
+  .cortexlog/last_good_commit
+
+------------------------------------------------------------
+8. Cursor CLI runner
+------------------------------------------------------------
+
+Implement runner as a local script wrapper, not direct unguarded CLI calls.
+
+Example flow:
+- Harness writes task file:
+  .cortexlog/modify/request-{id}/task.md
+- Harness writes policy file:
+  .cortexlog/modify/request-{id}/policy.md
+- Harness writes expected scope file:
+  .cortexlog/modify/request-{id}/scope.json
+- Cursor CLI receives task with instructions to obey policy and scope
+- Cursor CLI modifies code
+- Harness inspects actual diff
+
+Task prompt template for Cursor CLI:
+
+“You are modifying the local CortexLog app.
+
+User request:
+{user_prompt}
+
+Interpreted goal:
+{interpreted_goal}
+
+Change category:
+{category}
+
+Risk level:
+{risk_level}
+
+Allowed scope:
+{allowed_scope}
+
+Forbidden scope:
+{forbidden_scope}
+
+Rules:
+- Do not touch local journal data, database files, secrets, auth bypasses, delete-all/export behavior, or API key handling unless explicitly included in allowed scope.
+- Prefer settings/overlay changes for appearance and behavior preferences.
+- For feature additions, keep implementation minimal and local-first.
+- Do not add dependencies unless the task explicitly allows it.
+- Do not send user data to new external services.
+- Keep the app visually consistent with Journal / Explore / Modify design language.
+- After changes, provide a brief technical summary.”
+
+Runner abstraction:
+Create an interface:
+- runModifyTask(task): ModifyRunResult
+
+Implement:
+- CursorCliRunner now
+- CursorSdkRunner later
+
+Do not let UI call Cursor CLI directly. UI calls backend/harness. Harness calls runner.
+
+------------------------------------------------------------
+9. Modify API endpoints
+------------------------------------------------------------
+
+Implement backend endpoints:
+
+POST /modify/request
+Input:
+- user_prompt
+
+Output:
+- change_request_id
+- interpreted_goal
+- category
+- risk_level
+- impact
+- status: draft/proposed
+
+Purpose:
+Create and classify request. Optionally generate initial proposal before code changes.
+
+POST /modify/{id}/generate
+Purpose:
+Create restore point, invoke Cursor CLI, inspect patch, run checks, return proposed change.
+
+Output:
+- status: proposed | failed | blocked
+- summary_for_user
+- impact_json
+- changed_files
+- checks
+- warnings
+
+POST /modify/{id}/apply
+Purpose:
+Commit/apply proposed change.
+
+Output:
+- status: applied
+- git_commit_after
+
+POST /modify/{id}/reject
+Purpose:
+Discard proposed change.
+
+POST /modify/{id}/edit
+Input:
+- updated_user_prompt
+Purpose:
+Revise request and rerun classification.
+
+POST /modify/{id}/undo
+Purpose:
+Undo/revert applied change.
+
+GET /modify/history
+Purpose:
+Show change history.
+
+POST /modify/restore-point
+Purpose:
+Manual restore point.
+
+POST /modify/undo-last
+Purpose:
+Undo most recent applied change.
+
+GET /modify/status
+Purpose:
+Show whether runner/Git are available.
+
+------------------------------------------------------------
+10. Modify UI states
+------------------------------------------------------------
+
+Modify landing:
+- prompt box
+- examples
+- hint
+- empty proposed change panel
+
+After request classification:
+Right panel shows:
+- title
+- interpreted goal
+- category
+- risk
+- expected impact
+- button: Generate proposal
+- button: Edit request
+- button: Cancel
+
+During generation:
+- progress state:
+  - Creating restore point
+  - Asking local agent to make change
+  - Inspecting files
+  - Running checks
+  - Preparing preview
+
+If blocked:
+Show:
+- “CortexLog blocked this change”
+- reason
+- examples:
+  - touched protected files
+  - attempted to modify secrets
+  - attempted destructive database change
+  - added dependency without approval
+- actions:
+  - Edit request
+  - Dismiss
+  - Show technical details
+
+If proposed:
+Show:
+- title
+- description
+- impact bullets
+- safety result
+- changed areas
+- checks passed/warnings
+- actions:
+  - Apply
+  - Reject
+  - Edit
+  - Show technical details
+
+If applied:
+Show:
+- “Change applied”
+- summary
+- actions:
+  - Undo
+  - View history
+
+If failed:
+Show:
+- plain-language failure
+- logs summary
+- actions:
+  - Retry
+  - Edit request
+  - Restore previous version
+
+------------------------------------------------------------
+11. Edge cases and mitigations
+------------------------------------------------------------
+
+Edge case: User asks for something too vague
+Example:
+“Make this better”
+
+Mitigation:
+- Ask clarifying question inside Modify mode:
+  “What part should change: appearance, Journal behavior, Explore behavior, settings, or a new feature?”
+
+Edge case: User asks for a known setting
+Example:
+“Make font bigger”
+
+Mitigation:
+- Prefer adding or using Settings
+- If no setting exists, propose:
+  “I can add a font size setting instead of hard-coding one larger size.”
+
+Edge case: User asks for destructive data behavior
+Example:
+“Delete all chats older than 30 days”
+
+Mitigation:
+- Classify high risk
+- Block for MVP or require dedicated Data Controls flow
+- Never let generic Modify agent implement this silently
+
+Edge case: User asks for cloud sync/integration
+Example:
+“Sync my journal to Google Drive”
+
+Mitigation:
+- Block/defer external integrations for MVP
+- Explain that this requires privacy/security design
+- Offer local export as safer alternative
+
+Edge case: Cursor CLI not installed
+Mitigation:
+- Modify status shows:
+  “Local modification engine not available”
+- Provide setup instructions
+- Journal/Explore still work
+
+Edge case: Git unavailable
+Mitigation:
+- Modify mode disabled
+- Show:
+  “Restore point system unavailable. Install Git or enable bundled restore support.”
+
+Edge case: App is packaged and source files are not available
+Mitigation:
+- For MVP, self-modification requires developer/local source install
+- Later packaging must include modifiable app source or a local extension layer
+- Show clear status:
+  “Modify mode requires local source-enabled install.”
+
+Edge case: App breaks after apply
+Mitigation:
+- Last known good commit
+- Restore script
+- On next launch failure, show recovery option if possible
+
+Edge case: User repeatedly modifies app and diverges from base
+Mitigation:
+- Accept this for MVP
+- Track change history locally
+- Later support:
+  - export modification package
+  - reset to base version
+  - compare with base
+  - submit upstream improvement
+
+Edge case: Dependency added and introduces risk
+Mitigation:
+- Require separate dependency approval
+- Show dependency purpose
+- Block unknown dependency additions by default
+
+Edge case: LLM classifies incorrectly
+Mitigation:
+- Harness checks actual diff
+- If actual files exceed category scope, block or escalate
+- Classification is advisory, policy is enforced
+
+Edge case: Agent changes prompt safety
+Mitigation:
+- Prompt/safety files are protected
+- If prompt behavior tuning is requested, require safety preservation check
+
+Edge case: User asks to expose API key
+Mitigation:
+- Block
+- Never display raw key after storage
+- Allow “replace key” or “test connection”
+
+Edge case: Modify request touches journal DB schema
+Mitigation:
+- Require DB backup
+- Require migration safety check
+- Block destructive SQL
+- For MVP, only allow additive schema changes for medium-risk approved features
+
+Edge case: User has no internet / OpenAI unavailable
+Mitigation:
+- Journal/Explore show provider unavailable
+- Modify classification may fail if using OpenAI
+- Cursor CLI may still work if configured with its own model/account
+- Show clear status
+- User may still make a Jouranl entry and save it
+
+------------------------------------------------------------
+12. MVP implementation order
+------------------------------------------------------------
+
+Phase 1: Simplify app surface
+- Remove Proposed Insights
+- Remove Knowledge Map
+- Remove Gmail/Facebook/YouTube ingestion
+- Keep Journal and Chat foundations
+- Rename Chat to Explore
+- Port v0 UI into Electron renderer
+
+Phase 2: OpenAI provider
+- Add AI Provider settings
+- Store OpenAI key encrypted locally
+- Implement OpenAIProvider
+- Wire Journal and Explore to provider
+- Keep provider interface swappable
+
+Phase 3: Basic persistence
+- Save Journal entries with assistant response
+- Save Explore messages by session
+- Add simple memory table or keep lightweight context retrieval
+- Do not build heavy insight system
+
+Phase 4: Modify mode UI
+- Add third mode
+- Implement prompt input, examples, proposed change panel, global controls
+- Add Modify history screen/panel
+
+Phase 5: Git restore points
+- Initialize local Git if needed
+- Create baseline commit
+- Add .gitignore protections
+- Implement create restore point
+- Implement undo last change
+- Implement view history
+
+Phase 6: Harness classification
+- Implement change categories
+- Use OpenAI structured output to classify request
+- Store classification in change_requests
+- Show proposed interpretation to user
+
+Phase 7: Cursor CLI runner
+- Implement CursorCliRunner wrapper
+- Generate task/policy/scope files
+- Invoke Cursor CLI locally
+- Capture output/logs
+- Inspect diff
+
+Phase 8: Safety checks
+- Protected path checks
+- Secret scan
+- dependency scan
+- destructive SQL/filesystem scan
+- build/test command runner
+
+Phase 9: Preview-first Apply/Reject
+- Proposed change visible in UI
+- Apply commits patch
+- Reject discards patch
+- Undo reverts applied change
+
+Phase 10: Tighten first supported categories
+Initially support:
+- Appearance/theme customization
+- UI behavior customization
+- Prompt/behavior tuning
+- Read-only data views
+
+Initially block/defer:
+- External integrations
+- Destructive data changes
+- Auth/security changes
+- Complex dependency-heavy features
+
+------------------------------------------------------------
+13. Acceptance criteria
+------------------------------------------------------------
+
+Journal:
+- User can write a journal entry
+- User receives an LLM response
+- Entry and response are saved locally
+- UI is visually calm, journal-like, and wider than the initial narrow prototype
+
+Explore:
+- User can chat with the LLM
+- Messages stack without bubbles/avatars
+- Explore history is saved locally
+- UI feels related to Journal but slightly more energetic
+
+AI provider:
+- User can enter OpenAI API key
+- Key is stored encrypted locally
+- Frontend does not expose raw key
+- App can test provider connection
+- Journal/Explore call OpenAI through provider abstraction
+
+Modify:
+- User can enter a change request
+- System classifies request by category/risk
+- System creates restore point before generation
+- System invokes Cursor CLI through harness wrapper
+- System inspects changed files
+- System blocks protected changes
+- System runs build/test checks where available
+- System shows plain-English impact summary
+- User can Apply, Reject, or Edit
+- Applied change is committed locally
+- User can Undo last change
+- User can view change history
+
+Safety:
+- Modify cannot alter local journal DB files directly
+- Modify cannot expose API keys
+- Modify cannot bypass auth/secrets protections
+- Modify cannot add dependencies without approval
+- Modify cannot silently add external integrations
+- Modify cannot implement destructive data behavior without elevated flow
+
+Developer experience:
+- Cursor CLI runner is abstracted behind interface
+- Future Cursor SDK runner can replace CLI without changing UI or Modify API
+- Change categories/policies are centralized and easy to update
+
+------------------------------------------------------------
+14. Product wording
+------------------------------------------------------------
+
+Use this language in Modify mode:
+
+Main prompt:
+“What would you like to change?”
+
+Hint:
+“Describe the outcome, not the implementation.”
+
+Generation status:
+“CortexLog is creating a local restore point and preparing a proposed change.”
+
+Proposed change:
+“Review what CortexLog wants to change before applying it.”
+
+Safety copy:
+“This change does not affect your journal data.”
+or
+“This change affects how data is stored. A backup will be created before continuing.”
+
+Blocked copy:
+“CortexLog blocked this change because it touched protected parts of the app.”
+
+Apply success:
+“Change applied. You can undo this from Modify history.”
+
+Undo:
+“CortexLog restored the previous version.”
+
+------------------------------------------------------------
+15. Final architectural principle
+------------------------------------------------------------
+
+CortexLog’s Modify mode should not be an unrestricted coding agent.
+
+It should be a local, user-controlled app evolution loop:
+
+User intent
+→ LLM interpretation
+→ harness classification
+→ local restore point
+→ Cursor CLI patch
+→ deterministic safety checks
+→ user preview
+→ local apply
+→ rollback available
+
+The user is the human-in-the-loop. The developer is not.

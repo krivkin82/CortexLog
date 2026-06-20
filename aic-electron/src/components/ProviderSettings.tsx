@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import type { CortexLogProfile } from "@/vite-env";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  onProfileChanged?: () => void;
 };
 
-type Tab = "ai" | "modify";
+type Tab = "profile" | "ai" | "modify" | "debug";
 
 type LlmSettings = {
   model_source?: string;
@@ -29,8 +31,12 @@ type EngineStatus = {
   message?: string;
 };
 
-export function ProviderSettings({ open, onClose }: Props) {
-  const [tab, setTab] = useState<Tab>("ai");
+export function ProviderSettings({ open, onClose, onProfileChanged }: Props) {
+  const [tab, setTab] = useState<Tab>("profile");
+  const [profiles, setProfiles] = useState<CortexLogProfile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState("private");
+  const [newProfileName, setNewProfileName] = useState("");
+  const [renameLabel, setRenameLabel] = useState("");
   const [modelSource, setModelSource] = useState<"cloud" | "local">("local");
   const [cloudProvider, setCloudProvider] = useState("openai");
   const [cloudModel, setCloudModel] = useState("gpt-4o-mini");
@@ -52,6 +58,9 @@ export function ProviderSettings({ open, onClose }: Props) {
   const [engineTestSummary, setEngineTestSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  const [debugLogOn, setDebugLogOn] = useState(true);
+  const [debugLogPath, setDebugLogPath] = useState("");
 
   const loadAi = useCallback(async () => {
     const r = await apiFetch("/llm/settings");
@@ -77,6 +86,28 @@ export function ProviderSettings({ open, onClose }: Props) {
     if (d.providers) setProviders(d.providers);
   }, []);
 
+  const loadProfiles = useCallback(async () => {
+    if (!window.aic?.getProfiles) return;
+    const data = await window.aic.getProfiles();
+    setProfiles(data.profiles || []);
+    setActiveProfileId(data.active_profile_id || "private");
+    const active = data.active_profile || data.profiles?.find((p) => p.id === data.active_profile_id);
+    if (active) setRenameLabel(active.label);
+  }, []);
+
+  const loadDebug = useCallback(async () => {
+    const r = await apiFetch("/debug/settings");
+    if (!r.ok) return;
+    const d = (await r.json()) as {
+      settings?: { response_contract_log_enabled?: boolean };
+      log_file?: string;
+    };
+    if (typeof d.settings?.response_contract_log_enabled === "boolean") {
+      setDebugLogOn(d.settings.response_contract_log_enabled);
+    }
+    if (d.log_file) setDebugLogPath(d.log_file);
+  }, []);
+
   const loadEngine = useCallback(async () => {
     const [st, cfg] = await Promise.all([
       apiFetch("/modify/engine/status"),
@@ -99,39 +130,117 @@ export function ProviderSettings({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    void loadProfiles();
     void loadProviders();
     void loadAi();
     void loadEngine();
-  }, [open, loadAi, loadEngine, loadProviders]);
+    void loadDebug();
+  }, [open, loadAi, loadDebug, loadEngine, loadProfiles, loadProviders]);
 
   const refreshEngineStatus = async () => {
     const st = await apiFetch("/modify/engine/status");
     if (st.ok) setEngineStatus((await st.json()) as EngineStatus);
   };
 
+  const handleSwitchProfile = async (profileId: string) => {
+    if (!window.aic?.switchProfile) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      const result = await window.aic.switchProfile(profileId);
+      if (!result.ok) {
+        setStatus(result.detail || "Could not switch profile.");
+        setBusy(false);
+        return;
+      }
+      await loadProfiles();
+      setStatus(`Switched to ${result.active_profile?.label || profileId}.`);
+      onProfileChanged?.();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not switch profile.");
+    }
+    setBusy(false);
+  };
+
+  const handleCreateProfile = async () => {
+    const name = newProfileName.trim();
+    if (!name || !window.aic?.createProfile) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      const result = await window.aic.createProfile(name);
+      if (!result.ok) {
+        setStatus(result.detail || "Could not create profile.");
+        setBusy(false);
+        return;
+      }
+      setNewProfileName("");
+      await loadProfiles();
+      if (result.profile?.id) {
+        await handleSwitchProfile(result.profile.id);
+      } else {
+        setStatus("Profile created.");
+      }
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not create profile.");
+    }
+    setBusy(false);
+  };
+
+  const handleRenameProfile = async () => {
+    const label = renameLabel.trim();
+    if (!label || !window.aic?.renameProfile) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      const result = await window.aic.renameProfile({ id: activeProfileId, label });
+      if (!result.ok) {
+        setStatus(result.detail || "Could not rename profile.");
+        setBusy(false);
+        return;
+      }
+      await loadProfiles();
+      setStatus("Profile name updated.");
+      onProfileChanged?.();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not rename profile.");
+    }
+    setBusy(false);
+  };
+
+  const saveDebugLog = async (enabled: boolean) => {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const r = await apiFetch("/debug/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response_contract_log_enabled: enabled }),
+      });
+      if (!r.ok) {
+        const err = (await r.json().catch(() => ({}))) as { detail?: string };
+        setStatus(err.detail || "Save failed");
+        setBusy(false);
+        return;
+      }
+      const d = (await r.json()) as {
+        settings?: { response_contract_log_enabled?: boolean };
+        log_file?: string;
+      };
+      if (typeof d.settings?.response_contract_log_enabled === "boolean") {
+        setDebugLogOn(d.settings.response_contract_log_enabled);
+      }
+      if (d.log_file) setDebugLogPath(d.log_file);
+      setStatus(enabled ? "Debug log on." : "Debug log off.");
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Save failed");
+    }
+    setBusy(false);
+  };
+
   if (!open) return null;
 
   const saveAi = async () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fbd514" },
-      body: JSON.stringify({
-        sessionId: "fbd514",
-        runId: "cloud-debug",
-        hypothesisId: "H2",
-        location: "ProviderSettings.tsx:saveAi:start",
-        message: "Save AI clicked",
-        data: {
-          modelSource,
-          cloudProvider,
-          cloudModel,
-          hasOpenAIKeyInput: Boolean(openaiKey.trim()),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setBusy(true);
     setStatus(null);
     setTestReply(null);
@@ -148,21 +257,6 @@ export function ProviderSettings({ open, onClose }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fbd514" },
-        body: JSON.stringify({
-          sessionId: "fbd514",
-          runId: "cloud-debug",
-          hypothesisId: "H2",
-          location: "ProviderSettings.tsx:saveAi:response",
-          message: "Save AI response",
-          data: { ok: r.ok, status: r.status },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (!r.ok) {
         const err = (await r.json().catch(() => ({}))) as { detail?: string };
         setStatus(err.detail || "Save failed");
@@ -179,21 +273,6 @@ export function ProviderSettings({ open, onClose }: Props) {
   };
 
   const testAi = async () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fbd514" },
-      body: JSON.stringify({
-        sessionId: "fbd514",
-        runId: "cloud-debug",
-        hypothesisId: "H1",
-        location: "ProviderSettings.tsx:testAi:start",
-        message: "Test AI clicked",
-        data: { modelSource, cloudProvider, cloudModel },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setBusy(true);
     setStatus(null);
     setTestReply(null);
@@ -214,21 +293,6 @@ export function ProviderSettings({ open, onClose }: Props) {
           api_key: openaiKey.trim() || undefined,
         }),
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fbd514" },
-        body: JSON.stringify({
-          sessionId: "fbd514",
-          runId: "cloud-debug",
-          hypothesisId: "H4",
-          location: "ProviderSettings.tsx:testAi:response",
-          message: "Test AI response",
-          data: { ok: r.ok, status: r.status },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       const d = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
         response_text?: string;
@@ -241,21 +305,6 @@ export function ProviderSettings({ open, onClose }: Props) {
       if (d.response_text) setTestReply(d.response_text);
       setStatus("Test completed.");
     } catch (e) {
-      // #region agent log
-      fetch("http://127.0.0.1:7739/ingest/8d7d0d2f-58df-44c1-a19c-9fd5946c237a", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "fbd514" },
-        body: JSON.stringify({
-          sessionId: "fbd514",
-          runId: "cloud-debug",
-          hypothesisId: "H5",
-          location: "ProviderSettings.tsx:testAi:catch",
-          message: "Test AI threw",
-          data: { error: e instanceof Error ? e.message : "unknown error" },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (e instanceof Error && e.name === "TimeoutError") {
         setStatus("Test timed out. Verify the selected provider is running, then try again.");
       } else {
@@ -380,7 +429,17 @@ export function ProviderSettings({ open, onClose }: Props) {
           </button>
         </div>
 
-        <div className="mb-4 flex gap-2 border-b border-border pb-2">
+        <div className="mb-4 flex flex-wrap gap-2 border-b border-border pb-2">
+          <button
+            type="button"
+            className={`rounded-md px-3 py-1.5 text-sm ${tab === "profile" ? "bg-muted font-medium" : ""}`}
+            onClick={() => {
+              setTab("profile");
+              void loadProfiles();
+            }}
+          >
+            Profile
+          </button>
           <button
             type="button"
             className={`rounded-md px-3 py-1.5 text-sm ${tab === "ai" ? "bg-muted font-medium" : ""}`}
@@ -398,7 +457,83 @@ export function ProviderSettings({ open, onClose }: Props) {
           >
             Modify Engine
           </button>
+          <button
+            type="button"
+            className={`rounded-md px-3 py-1.5 text-sm ${tab === "debug" ? "bg-muted font-medium" : ""}`}
+            onClick={() => setTab("debug")}
+          >
+            Backend debug log
+          </button>
         </div>
+
+        {tab === "profile" && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Profiles keep journal entries, AI settings, and retrieved context separate on this
+              computer. They are workspaces, not secure user accounts.
+            </p>
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Active profile
+              </label>
+              <select
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                value={activeProfileId}
+                onChange={(e) => void handleSwitchProfile(e.target.value)}
+                disabled={busy}
+              >
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Profile display name
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm"
+                  value={renameLabel}
+                  onChange={(e) => setRenameLabel(e.target.value)}
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50"
+                  onClick={() => void handleRenameProfile()}
+                  disabled={busy}
+                >
+                  Save name
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                New profile
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm"
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.target.value)}
+                  placeholder="e.g. Demo, Client preview"
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50"
+                  onClick={() => void handleCreateProfile()}
+                  disabled={busy || !newProfileName.trim()}
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {tab === "ai" && (
           <div className="space-y-4">
@@ -521,6 +656,44 @@ export function ProviderSettings({ open, onClose }: Props) {
                 Test AI
               </button>
             </div>
+          </div>
+        )}
+
+        {tab === "debug" && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Controls backend LLM debug logging. Useful for troubleshooting local inference and
+              request flow details; persists across restarts.
+            </p>
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+              <div>
+                <p className="font-medium text-foreground">Debug log</p>
+                <p className="text-xs text-muted-foreground">
+                  {debugLogOn ? "On — writing to log file and backend console" : "Off"}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={debugLogOn}
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                  debugLogOn ? "bg-foreground" : "bg-muted"
+                }`}
+                disabled={busy}
+                onClick={() => void saveDebugLog(!debugLogOn)}
+              >
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-background shadow transition-transform ${
+                    debugLogOn ? "left-5" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+            {debugLogPath && (
+              <p className="text-xs text-muted-foreground break-all">
+                Log file: {debugLogPath}
+              </p>
+            )}
           </div>
         )}
 

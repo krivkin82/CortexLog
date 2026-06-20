@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Dict
 
+from app.core.config import DATA_DIR
 from app.storage.settings import get_setting, set_setting
 
 SETTINGS_KEY = "cortexlog_debug"
@@ -49,3 +51,8 @@ def ensure_debug_settings_defaults() -> None:
     """Persist default-on debug logging on first run."""
     if get_setting(SETTINGS_KEY) is None:
         save_debug_settings_dict(DEFAULT_DEBUG_SETTINGS)
+
+
+def response_debug_log_path() -> str:
+    """Canonical debug log path for response-generation diagnostics."""
+    return str(Path(DATA_DIR) / "response_debug.log")

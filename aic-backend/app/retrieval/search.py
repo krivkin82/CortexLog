@@ -1,6 +1,6 @@
 import math
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Iterable
 
 from app.llm.embedding import embed_text
 from app.llm.policy import is_prompt_injection
@@ -31,11 +31,14 @@ def recency_boost(iso_ts: str | None) -> float:
     return 1.0 / (1.0 + max(days, 0))
 
 
-def retrieve(query: str, limit: int = 5) -> Dict[str, Any]:
+def retrieve(query: str, limit: int = 5, exclude_item_ids: Iterable[str] | None = None) -> Dict[str, Any]:
     query_embedding = embed_text(query)
     records = list_embeddings_with_chunks()
+    excluded = {x for x in (exclude_item_ids or []) if x}
     scored: List[Dict[str, Any]] = []
     for record in records:
+        if record["item_id"] in excluded:
+            continue
         if is_prompt_injection(record["chunk_content"]):
             continue
         similarity = cosine_similarity(query_embedding, record["embedding"])

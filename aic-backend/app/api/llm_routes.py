@@ -10,9 +10,9 @@ from pydantic import BaseModel
 
 from app.llm.debug_settings import (
     get_debug_settings_dict,
+    response_debug_log_path,
     set_response_contract_log_enabled,
 )
-from app.llm.response_contract import response_contract_log_path
 from app.llm.llm_settings import (
     LEGACY_SECRET_OPENAI,
     SECRET_KEY_ANTHROPIC,
@@ -154,12 +154,13 @@ def llm_test(request: LLMTestRequest | None = None) -> dict:
             from app.llm.llm_settings import effective_ollama_model
             from app.llm.providers.ollama_provider import OllamaProvider
 
-            lt, npred = local_chat_inference(llm)
+            lt, npred, nctx = local_chat_inference(llm)
             text = OllamaProvider().chat(
                 messages,
                 model=effective_ollama_model(llm),
                 temperature=lt,
                 num_predict=npred,
+                num_ctx=nctx,
             )
             return {
                 "ok": True,
@@ -230,11 +231,11 @@ class DebugSettingsUpdateRequest(BaseModel):
 
 @router.get("/debug/settings")
 def debug_settings_get() -> dict:
-    """Response contract debug log toggle (persisted; default on)."""
+    """Response debug log toggle (legacy key retained for compatibility)."""
     settings = get_debug_settings_dict()
     return {
         "settings": settings,
-        "log_file": response_contract_log_path(),
+        "log_file": response_debug_log_path(),
     }
 
 
@@ -244,6 +245,6 @@ def debug_settings_post(request: DebugSettingsUpdateRequest) -> dict:
     return {
         "ok": True,
         "settings": get_debug_settings_dict(),
-        "log_file": response_contract_log_path(),
+        "log_file": response_debug_log_path(),
     }
 

@@ -1,37 +1,42 @@
-# Python
+# Python artifacts
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Virtual environments
 venv/
+
+# Environment files
 .env
 .env.*
 
 # Build artifacts
 build/
 dist/
-
-# PyInstaller
-*.spec
-*.toc
+out/
+release/
+renderer-dist/
 *.pyz
+*.toc
+*.tsbuildinfo
 
-# Database
+# Node artifacts
+node_modules/
+
+# Runtime/local app data and secrets
+data/
 *.db
-
-# Local auth / secrets (do not commit)
-data/api_token
-data/auth.json
+api_token
+auth.json
+secrets.json
+.cortexlog_machine
 
 # Logs
 *.log
 
-# Node
-node_modules/
+# Packaged artifacts
+aic-electron.zip
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 

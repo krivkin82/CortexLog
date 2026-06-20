@@ -1,4 +1,2 @@
-node_modules/
-dist/
-out/
-release/
+# Root `.gitignore` owns shared Electron/Node ignore rules.
+# Keep this file minimal to avoid duplicate maintenance.

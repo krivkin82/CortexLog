@@ -26,7 +26,7 @@ Also see:
   - **Save failed but UI cleared input** (silent failure / missing error handling)
   - **Backend is pointing at a different DB** than you think (different process / packaged vs dev)
 - **Where to look**
-  - **Frontend**: `aic-electron/renderer/renderer.js` (`saveJournalEntry`, `reflectOnJournal`)
+  - **Frontend**: `aic-electron/src/components/JournalMode.tsx` and `aic-electron/src/lib/api.ts`
   - **Backend**: `aic-backend/app/api/routes.py` (`/journal`, `/journal/reflect`)
   - **DB path**: `aic-backend/app/storage/database.py` (`DEFAULT_DB_PATH`)
 - **Quick checks**
@@ -42,7 +42,7 @@ Also see:
 - **Where to look**
   - `aic-backend/app/storage/database.py` (DB path)
   - `aic-backend/app/storage/admin.py` (`wipe_all_data`)
-  - `aic-electron/renderer/settings.js` (`/delete_all`)
+  - `aic-electron/src/App.tsx` + `aic-electron/src/lib/api.ts` (data controls and route calls)
   - `aic-electron/main.js` (how backend is started: packaged exe vs `run_dev.bat`)
 - **Quick checks**
   - Check whether `aic-backend/data/aic.db` exists and its modified time changes on save.
@@ -64,21 +64,101 @@ Also see:
   - Confirm `GET /health` responds.
   - Check for an existing process already bound to `8000`.
 
+#### “Missing or invalid API key” with `Backend: Ok` (Settings / `/llm/*`)
+- **Likely causes**
+  - **`X-API-Key` does not match backend** — renderer reads `api_token` from a different path than the frozen backend writes (portable EXE + `%APPDATA%` under `AppData\Local\Temp`, or legacy `resources\backend\data\api_token` install).
+- **Where to look**
+  - `aic-electron/main.js` — `getApiTokenPath()`, `migrateLegacyApiTokenIfNeeded`
+  - Frozen `DATA_DIR`: `aic-backend/app/core/config.py` (`_resolve_data_dir`)
+  - Middleware: `aic-backend/app/main.py` (`Missing or invalid API key`)
+- **Quick checks**
+  - Packaged: token should live under real Roaming: `%APPDATA%\CortexLog\data\api_token` (not under a `Temp\…\resources` path).
+  - Rebuild **both** backend + Electron after path changes.
+
 ---
 
-### LLM / Ollama
+### LLM / Ollama / cloud providers
 
-#### “LLM unavailable. Is Ollama running?”
+#### Chat or journal returns `503` with detail like “OpenAI API key not configured” or “Local model unavailable”
 - **Likely causes**
-  - Ollama server not running
-  - Model not installed / wrong model name
-  - Ollama base URL changed
+  - **`model_source` is `cloud`** but no OpenAI key stored under `llm_api_key_openai` (or legacy `openai_api_key`)
+  - **`model_source` is `local`** but Ollama is down, wrong model, or bad base URL
+  - **Unimplemented cloud provider** selected (Anthropic/Gemini) — not wired yet
 - **Where to look**
-  - Backend config: `aic-backend/app/core/config.py` (`AIC_OLLAMA_MODEL`, `AIC_OLLAMA_BASE_URL`)
-  - Client health checks: `aic-electron/renderer/renderer.js`
+  - Routing: `aic-backend/app/llm/service.py` (`chat_completion`, `LLMUnavailableError`)
+  - Settings: `aic-backend/app/llm/llm_settings.py`, `GET/POST /llm/settings` in `aic-backend/app/api/llm_routes.py`
+  - UI: `aic-electron/src/components/ProviderSettings.tsx`, status `GET /llm/status`
 - **Quick checks**
-  - Confirm Ollama responds to `/api/tags`
+  - `GET /llm/status` — `model_source`, `openai_key_configured`, `ollama_reachable`, `active_label`
+  - `POST /llm/test` with the same source you use in the app
+
+#### “LLM unavailable. Is Ollama running?” (legacy UI copy)
+- **Likely causes**
+  - Same as above; older routes may still say “Ollama” while the backend now supports **cloud or local** via `cortexlog_llm`.
+- **Where to look**
+  - `aic-backend/app/api/routes.py` (`/chat`, `/journal/reflect`, `/health/llm`)
+  - Backend config: `aic-backend/app/core/config.py` (`AIC_OLLAMA_MODEL`, `AIC_OLLAMA_BASE_URL`)
+- **Quick checks**
+  - Confirm Ollama responds to `/api/tags` when using **local** source
+  - Confirm OpenAI key is saved when using **cloud** source
   - Confirm configured model exists
+
+#### Settings “LLM test failed” with OpenAI cloud (key appears valid)
+- **Likely causes**
+  - **OpenAI `429` / `insufficient_quota`** — billing or usage limits on the OpenAI org/project; not a CortexLog wiring bug if the backend log shows `RateLimitError` with `insufficient_quota`
+  - **Invalid or revoked key** — usually `401` / `AuthenticationError` from OpenAI
+- **Where to look**
+  - `aic-backend/app/api/llm_routes.py` (`POST /llm/test` maps OpenAI exceptions to HTTP errors and `detail` text)
+  - OpenAI dashboard: billing, usage limits, project API keys
+- **Quick checks**
+  - Re-run **Test AI** and read the HTTP `detail` returned (after handling, it should mention quota vs key vs network)
+  - Confirm spend limits / payment method on the OpenAI account that owns the key
+
+#### Journal reflection feels rigid/template-like (e.g. “Option 1 / Option 2 / Recommendation”) while direct Ollama/OpenAI output is better
+- **Likely causes**
+  - Response-contract harness over-shaping replies into template formats not suited for journal reflection
+  - Journal route passes scaffolded wrapper instructions that bias intent detection away from natural reflection
+  - Retry/validation loops reinforce structured response shape instead of adapting to entry tone
+- **Where to look**
+  - `aic-backend/app/llm/response.py` (ensure direct completion path is used for journal/explore)
+  - `aic-backend/app/api/routes.py` (`/journal/reflect` should pass raw entry content)
+  - `aic-backend/app/llm/response_contract.py` (legacy harness/template code; ensure not active in journal path)
+- **Quick checks**
+  - Submit a reflective entry with no explicit request for options and verify response avoids `Option 1`, `Option 2`, `Recommendation`
+  - Compare backend prompt path for `/journal/reflect` against direct provider behavior for same entry
+  - Confirm current journal/explore generation path uses raw user input plus retrieved context/session continuity, without contract-template injection or behavioral prompt instructions
+
+#### Retrieval quality degrades after backend restart (same query, worse/missing matches)
+- **Likely causes**
+  - Embedding vectors built with non-deterministic token hashing (`hash(token)`) become incomparable across interpreter processes
+- **Where to look**
+  - `aic-backend/app/llm/embedding.py`
+  - `aic-backend/scripts/reembed_chunks.py`
+- **Quick checks**
+  - Confirm deterministic token index function is used for embeddings
+  - Re-embed existing chunk vectors and compare retrieval quality before/after
+
+#### Journal reflections ignore prior journal memory
+- **Likely causes**
+  - Journal entries were saved but not chunked/embedded for retrieval
+  - Reflection retrieval includes the current entry itself, wasting context slots
+- **Where to look**
+  - `aic-backend/app/api/routes.py` (`/journal`, `/journal/reflect`)
+  - `aic-backend/app/storage/chunks.py`
+  - `aic-backend/app/storage/vector_store.py`
+  - `aic-backend/app/retrieval/search.py`
+- **Quick checks**
+  - Verify new journal save creates chunks + embeddings
+  - Verify `/journal/reflect` excludes current entry item id from retrieval candidates
+
+#### Explore/chat feels amnesiac in longer sessions
+- **Likely causes**
+  - Chat retrieval ordered oldest-first with `LIMIT`, dropping recent turns as sessions grow
+- **Where to look**
+  - `aic-backend/app/storage/chat.py` (`list_chat_messages`)
+- **Quick checks**
+  - Verify latest N are fetched (`DESC LIMIT`) and then reversed for chronological replay
+  - Confirm conversation continuity reflects recent turns, not earliest turns
 
 ---
 
@@ -91,13 +171,13 @@ Also see:
 - **Where to look**
   - Backend route: `aic-backend/app/api/routes.py` (delete_all endpoint)
   - Deletion implementation: `aic-backend/app/storage/admin.py`
-  - UI trigger: `aic-electron/renderer/settings.js`
+  - UI trigger: `aic-electron/src/App.tsx`
 
 ---
 
 ## Architectural quick map (for debugging)
 
-- **Electron renderer** talks to backend over HTTP at `http://127.0.0.1:8000` (see `aic-electron/renderer/renderer.js`).
+- **Electron renderer** talks to backend over HTTP at `http://127.0.0.1:8000` (see `aic-electron/src/lib/api.ts`).
 - **Electron main** is responsible for starting the backend (dev: `aic-backend/run_dev.bat`, packaged: `aic-backend.exe`) — see `aic-electron/main.js`.
 - **Backend storage** is SQLite under `aic-backend/data/aic.db` (see `DEFAULT_DB_PATH` in `aic-backend/app/storage/database.py`).
 - **“Delete all”** removes `aic-backend/data/` entirely (see `aic-backend/app/storage/admin.py`).

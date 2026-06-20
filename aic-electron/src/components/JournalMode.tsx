@@ -22,6 +22,63 @@ function formatDate(date: Date): string {
   });
 }
 
+/** e.g. January 1, 2026. 12:05 PM */
+function formatEntryStamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const datePart = d.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timePart = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${datePart}. ${timePart}`;
+}
+
+function JournalEntryRow({
+  entry,
+  showReflecting = false,
+}: {
+  entry: JournalEntryRow;
+  showReflecting?: boolean;
+}) {
+  const stamp = formatEntryStamp(entry.created_at);
+
+  return (
+    <div className="flex gap-8 md:gap-12">
+      <div className="flex-1">
+        {stamp ? (
+          <time
+            dateTime={entry.created_at}
+            className="mb-4 block font-sans text-[0.8125rem] tracking-wide text-muted-foreground/75"
+          >
+            {stamp}
+          </time>
+        ) : null}
+        <p className="whitespace-pre-wrap font-serif text-xl leading-relaxed text-foreground md:text-2xl">
+          {entry.content}
+        </p>
+      </div>
+      <div className="flex-1 border-l border-muted-foreground/15 pl-8 md:pl-12">
+        {stamp ? <div className="mb-4 h-[1.125rem]" aria-hidden /> : null}
+        {entry.reflection ? (
+          <p className="whitespace-pre-wrap font-serif text-lg italic leading-relaxed text-muted-foreground/70">
+            {entry.reflection}
+          </p>
+        ) : (
+          <p className="font-serif text-sm text-muted-foreground/50">
+            {showReflecting ? "Reflecting…" : "No reflection yet."}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function JournalMode({
   isFocused,
   setIsFocused,
@@ -31,11 +88,11 @@ export function JournalMode({
 }) {
   const [journalContent, setJournalContent] = useState("");
   const [entries, setEntries] = useState<JournalEntryRow[]>([]);
+  const [reflectingEntryIds, setReflectingEntryIds] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const journalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const today = new Date();
-
-  const isSplitView = entries.length > 0;
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +108,35 @@ export function JournalMode({
   useEffect(() => {
     void load();
   }, [load]);
+
+  const setEntryReflecting = useCallback((entryId: string, reflecting: boolean) => {
+    setReflectingEntryIds((prev) => {
+      if (reflecting) {
+        if (prev.includes(entryId)) return prev;
+        return [...prev, entryId];
+      }
+      return prev.filter((id) => id !== entryId);
+    });
+  }, []);
+
+  const reflectEntryInBackground = useCallback(
+    async (entryId: string) => {
+      setEntryReflecting(entryId, true);
+      try {
+        await apiFetch("/journal/reflect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entry_id: entryId }),
+        });
+      } catch {
+        /* reflection optional if LLM down */
+      } finally {
+        setEntryReflecting(entryId, false);
+        await load();
+      }
+    },
+    [load, setEntryReflecting],
+  );
 
   const autoResize = useCallback(() => {
     const ta = journalTextareaRef.current;
@@ -90,17 +176,12 @@ export function JournalMode({
     const entryId = saveData.entry?.id;
     setJournalContent("");
     if (entryId) {
-      try {
-        await apiFetch("/journal/reflect", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ entry_id: entryId }),
-        });
-      } catch {
-        /* reflection optional if LLM down */
-      }
+      setEntryReflecting(entryId, true);
     }
     await load();
+    if (entryId) {
+      void reflectEntryInBackground(entryId);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -114,12 +195,49 @@ export function JournalMode({
     ? journalContent.trim().split(/\s+/).length
     : 0;
 
+  // Most recent entry first
+  const sortedEntries = [...entries].reverse();
+  // The newest entry is always shown as "current"; older ones are behind the toggle
+  const currentEntry = sortedEntries[0] ?? null;
+  const olderEntries = sortedEntries.slice(1);
+  const hasOlderEntries = olderEntries.length > 0;
+  const hasJournalHistory = entries.length > 0;
+
+  const historyToggleLabel = hasOlderEntries
+    ? showHistory
+      ? "Hide entries"
+      : "See previous entries"
+    : showHistory
+      ? "Hide entry"
+      : "View last entry";
+
+  const scrollToCurrentEntry = () => {
+    document.getElementById("journal-current-entry")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const handleHistoryToggle = () => {
+    if (!hasOlderEntries && currentEntry) {
+      setShowHistory((v) => {
+        const next = !v;
+        if (!v) {
+          window.requestAnimationFrame(() => scrollToCurrentEntry());
+        }
+        return next;
+      });
+      return;
+    }
+    setShowHistory((v) => !v);
+  };
+
   return (
     <div className="relative">
       <header
         className={`mb-10 transition-opacity duration-500 ${
           isFocused ? "opacity-40" : "opacity-100"
-        } ${isSplitView ? "text-center" : ""}`}
+        }`}
       >
         <time
           dateTime={today.toISOString()}
@@ -135,67 +253,75 @@ export function JournalMode({
         </p>
       )}
 
-      {isSplitView && (
-        <div className="mb-12 space-y-8">
-          {entries.map((entry) => (
-            <div key={entry.id} className="flex gap-8 md:gap-12">
-              <div className="flex-1">
-                <p className="font-serif text-xl leading-relaxed text-foreground md:text-2xl">
-                  {entry.content}
-                </p>
-              </div>
-              <div className="flex-1 border-l border-muted-foreground/15 pl-8 md:pl-12">
-                {entry.reflection ? (
-                  <p className="font-serif text-lg italic leading-relaxed text-muted-foreground/70">
-                    {entry.reflection}
-                  </p>
-                ) : (
-                  <p className="font-serif text-sm text-muted-foreground/50">No reflection yet.</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className={isSplitView ? "flex gap-8 md:gap-12" : ""}>
-        <div className={isSplitView ? "flex-1" : ""}>
-          <textarea
-            ref={journalTextareaRef}
-            value={journalContent}
-            onChange={(e) => setJournalContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={isSplitView ? "Continue writing..." : "Begin writing..."}
-            className="scrollbar-thin w-full resize-none border-none bg-transparent font-serif text-xl leading-9 text-foreground outline-none placeholder:italic placeholder:text-muted-foreground/50 selection:bg-accent/30 md:text-2xl"
-            style={{ minHeight: "36px" }}
-            rows={1}
-            spellCheck
-            aria-label="Journal entry"
-          />
-        </div>
-        {isSplitView && (
-          <div className="flex-1 border-l border-muted-foreground/15 pl-8 md:pl-12">
-            {journalContent.trim() && (
-              <p className="font-serif text-lg italic leading-relaxed text-muted-foreground/40">
-                AI response will appear here after you submit…
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Input always at the top */}
+      <textarea
+        ref={journalTextareaRef}
+        value={journalContent}
+        onChange={(e) => setJournalContent(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        placeholder="Begin writing..."
+        className="scrollbar-thin w-full resize-none border-none bg-transparent font-serif text-xl leading-9 text-foreground outline-none placeholder:italic placeholder:text-muted-foreground/50 selection:bg-accent/30 md:text-2xl"
+        style={{ minHeight: "36px" }}
+        rows={1}
+        spellCheck
+        aria-label="Journal entry"
+      />
 
       <footer
-        className={`mt-12 flex items-center justify-between transition-opacity duration-500 ${
+        className={`mt-12 flex items-center justify-between gap-4 transition-opacity duration-500 ${
           isFocused ? "opacity-30" : "opacity-60"
         }`}
       >
         <p className="font-sans text-xs tracking-wide text-muted-foreground">
           {wordCount > 0 ? `${wordCount} words` : ""}
         </p>
-        <p className="font-sans text-xs text-muted-foreground/50">Press Enter to submit</p>
+        <p className="shrink-0 font-sans text-xs text-muted-foreground/50">Press Enter to submit</p>
       </footer>
+
+      {/* Most recent entry — always visible once submitted */}
+      {currentEntry && (
+        <div
+          id="journal-current-entry"
+          className="mt-16 border-t border-muted-foreground/10 pt-12"
+        >
+          <JournalEntryRow
+            entry={currentEntry}
+            showReflecting={reflectingEntryIds.includes(currentEntry.id)}
+          />
+        </div>
+      )}
+
+      {/* Older entries revealed on demand, reverse chronological */}
+      {showHistory && olderEntries.length > 0 && (
+        <div className="mt-12 space-y-10">
+          {olderEntries.map((entry) => (
+            <JournalEntryRow
+              key={entry.id}
+              entry={entry}
+              showReflecting={reflectingEntryIds.includes(entry.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Fixed bottom-left — same control, visible whenever this profile has journal history */}
+      {hasJournalHistory && (
+        <div className="fixed bottom-6 left-6 z-10">
+          <button
+            type="button"
+            onClick={handleHistoryToggle}
+            className={`font-sans text-xs tracking-wide transition-all duration-300 ${
+              isFocused
+                ? "opacity-40 hover:opacity-70"
+                : "opacity-80 hover:opacity-100"
+            } text-muted-foreground`}
+          >
+            {historyToggleLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

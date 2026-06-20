@@ -1,14 +1,17 @@
 import urllib.error
 import urllib.request
+import uuid
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from app.ingestion.chunking import chunk_text
 from app.ingestion.local_files import ingest_local_paths, ingest_local_paths_streaming
 from app.ingestion.gmail import ingest_gmail_messages
 from app.ingestion.facebook_export import ingest_facebook_export
 from app.ingestion.youtube_export import ingest_youtube_export
+from app.llm.embedding import embed_text
 from app.llm.policy import detect_distress, normalize_mode
 from app.llm.response import generate_response
 from app.llm.service import LLMUnavailableError
@@ -23,7 +26,7 @@ from app.storage.journal import (
     clear_journal_reflection,
 )
 from app.storage.items import create_item
-from app.storage.items import get_item
+from app.storage.items import get_item, get_item_by_path
 from app.storage.proposed_insights import (
     get_proposed_insight,
     list_proposed_insights,
@@ -41,11 +44,12 @@ from app.storage.entities import (
     cleanup_garbage_entities,
 )
 from app.storage.categories import list_categories
-from app.storage.chunks import get_chunks_for_item
+from app.storage.chunks import create_chunks, get_chunks_for_item
 from app.storage.llm_analysis import list_items_needing_analysis, list_items_with_chunks
 from app.storage.conflicts import list_conflicts, update_conflict_status
 from app.storage.export import export_all
 from app.storage.admin import wipe_all_data
+from app.storage.vector_store import EmbeddingRecord, add_embeddings, now_iso
 from app.security.machine_key import get_machine_passphrase
 from app.security.secret_store import (
     get_secret,
@@ -63,11 +67,45 @@ from app.storage.provenance import create_provenance, list_provenance_for_entity
 from app.storage.relations import delete_relation, list_relations
 
 router = APIRouter()
+JOURNAL_REFLECT_SESSION_ID = "__journal_reflect__"
+
+
+def _index_journal_entry(entry_id: str, content: str) -> str:
+    item_id = create_item(
+        source_type="journal",
+        source_ref=entry_id,
+        path_or_id=entry_id,
+        content_hash=None,
+        raw_meta={"source": "journal", "journal_entry_id": entry_id},
+        ingestion_status="processed",
+    )
+    chunks = chunk_text(content, max_chars=1200, overlap=150)
+    chunk_ids = create_chunks(item_id, chunks)
+    embeddings = [
+        EmbeddingRecord(
+            id=str(uuid.uuid4()),
+            item_id=item_id,
+            chunk_id=chunk_id,
+            embedding=embed_text(chunk),
+            created_at=now_iso(),
+        )
+        for chunk_id, chunk in zip(chunk_ids, chunks)
+    ]
+    if embeddings:
+        add_embeddings(item_id, embeddings)
+    return item_id
 
 
 @router.get("/health")
 def health_check() -> dict:
-    return {"status": "ok"}
+    from app.core.config import DATA_DIR, get_active_profile_id
+
+    return {
+        "status": "ok",
+        "service": "cortexlog-backend",
+        "profile_id": get_active_profile_id(),
+        "data_dir": str(DATA_DIR),
+    }
 
 
 # --- Auth: salt and password verification ---
@@ -297,14 +335,7 @@ def add_journal_entry(request: JournalEntryRequest) -> dict:
         structured_fields=request.structured_fields,
         user_id=request.user_id,
     )
-    create_item(
-        source_type="journal",
-        source_ref=None,
-        path_or_id=entry["id"],
-        content_hash=None,
-        raw_meta={"source": "journal"},
-        ingestion_status="processed",
-    )
+    _index_journal_entry(entry["id"], request.content)
     return {"entry": entry}
 
 
@@ -327,24 +358,32 @@ def journal_reflect(request: JournalReflectRequest | None = None) -> dict:
     entry_content = (entry.get("content") or "").strip()
     if not entry_content:
         raise HTTPException(status_code=400, detail="Journal entry has no content")
-    retrieval_result = retrieve(entry_content, limit=3)
+    entry_item = get_item_by_path(entry_id)
+    exclude_ids = [entry_item["id"]] if entry_item else []
+    retrieval_result = retrieve(entry_content, limit=3, exclude_item_ids=exclude_ids)
     retrieved_context = [m["content"] for m in retrieval_result.get("matches", [])]
-    reflect_prompt = (
-        "Reflect on this journal entry only. Name explicit themes or tensions, "
-        "connect ideas where it helps, and offer a concise synthesis—no platitudes. "
-        "Do not diagnose. Do not end with a stock question about feelings; substance first.\n\n"
-        f"{entry_content}"
-    )
     try:
+        create_chat_message(
+            role="user",
+            content=entry_content,
+            mode="journal",
+            session_id=JOURNAL_REFLECT_SESSION_ID,
+        )
         payload = generate_response(
-            reflect_prompt,
+            entry_content,
             "journal",
             retrieved_context=retrieved_context,
-            session_id=None,
+            session_id=JOURNAL_REFLECT_SESSION_ID,
         )
     except LLMUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     reflection_text = payload.get("text") or ""
+    create_chat_message(
+        role="assistant",
+        content=reflection_text,
+        mode="journal",
+        session_id=JOURNAL_REFLECT_SESSION_ID,
+    )
     update_journal_reflection(entry_id, reflection_text)
     return {"text": reflection_text, "entry_id": entry_id}
 

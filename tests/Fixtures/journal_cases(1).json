@@ -1,0 +1,142 @@
+[
+  {
+    "id": "workplace_gemini_prompt_concern_01",
+    "title": "Worried internal Gemini prompt may be seen by employer",
+    "mode_expected": "advisor_workplace",
+    "tags": ["workplace", "career", "reputation_fear", "journal"],
+    "input": "2/28/26, 12:09 AM Please act as a wise mentor with the knowledge of many lifetimes of experiences under your belt.I input a prompt into Gemini that I'd like to be able to delete. I was upset with my senior co-worker and my boss and I input a prompt that showed that I was upset. Nothing too crazy, but two things: that I don't appreciate having my technical skills being continuosly capped. And that I'm considering having a conversation about a lateral move. I guess I should explain a little more. I think David, my boss, and Matt, senior 30yo co-worker, both of whom have been at the company for about 11 years (I've been there for two and change), have a very defensive, CYA attitude. Some of it can be warranted, but I feel like theirs is pervasive. It's rarely about getting anything done, unless it's to pressure me. But when I'm trying to get a project done, many times their thought-pattern feels like it's along the lines, "don't do anything that can make any of it come back on us; what about doing what's necessary to get it over the lines? don't really care." I'm being a little dramatic, but not by much. It's more nuanced than that, of course, everything is - but what I said applies. It's frustrating to have them tell me that my ability to query the DB, get the information I need to make sound decisions and anticipate issues or blockers, or get information for my co-workers... I mean, I work as a Business Analyst in a technology company, so, should be easy enough to infer. And my ability to do this is treated, to a significant extent, with mistrust and like a potential liability. Which, granted, it is. However, it's an important skill to have (obviously), and being pushed in the opposite direction of professional technical growth makes me wonder if I'm on the right team. I was thinking about it - and that's what I put into my prompt in Gemini, which is what we have to use at work, including the stuff about about all the ass-covering... less detailed. I mentioned their "CYA" mentality, but I didn't go into nearly the detail I just went into here above. Anyway, I was thinking that, a) since I'm already having such strong thoughts about a lateral move, that conversation is actually very likely to happen in real life. This part now, I didn't put into Gemini, but I've sensed hostility from my boss for close to a year now, maybe 8 months, but long enough. I sense it physically when we're in the office and it's, obviously, unpleasant. So taking the professional issues and the interpersonal tension, it's quite doable for me to think of a lateral move in the org. So I was thinking that if I were going to have that conversation, I should have a few ideas of where to go in mind, and I had two. I've been working with the Accounting & Audit teams - well, it's like 3 people - and there's a big accounting platform migration in vendor research/demo phase, with the idea that within a year or two, we will have migrated the accounting and GL to a new platform. I've been working with them for about 8 months now, and one idea I could pitch is some sort of a more personal role like an Account BA. It's a bit of a weird suggestion maybe because all BA's are currently in the Product Group, reporting to my boss, who reports to the CTO. So it's CEO -> CTO -> David my boss -> all of us in professional IT roles like technical writer, UI designer, UX researcher, API analyst, Snowflake developer, PM's, a few others, it's like 18 people or 20 maybe. So a BA who's part Accounting but not in Product would be new for this company. With that said, it's a fairly small company of 130 people or so. The other option I could suggest - and this is a little crazy, but still - is that of an AI integrator. Meaning, real, advanced AI engineering in terms of context window definitions, agent harnesses, intent engineering, and other roles you would probably know better than I. I don't even know if I'd be able to do it, but it's cool to think about! So that's the prompt I put in - how to frame the conversation around a lateral move.And now I'm not sure if my prompt will be read by someone in IT, maybe. There isn't an immediate menu item to delete the chat in the three-dot menu of the chat. My boss and I might not love each other, but I wasn't intentionally trying to hurt my boss, either. The "CYA" comment, if found, could be used against him, maybe? Not sure what the HR policy on that would be, but whatever the policy is, if someone sees it... although how many chat histories must there be across the entire company? So, just thinking about all of those things - let me know your thoughts.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": true,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "workplace_modal_risk_01",
+    "title": "Business analyst weighing payment modal split risk versus ROI",
+    "mode_expected": "advisor_workplace",
+    "tags": ["workplace", "business_analysis", "risk_analysis", "meeting_prep"],
+    "input": "You're a senior business analyst. The attached ACCAUD-92 contains high-level requirements to separate the Forth Custodial (Gateway_id = 1, 20) from the other gateways. The attached paymentModal contains some of the code. There're probably other places in the codebase which are also used on conjunction. The attached DSRP CRM - Add Payment contains the list of targeted changes for the Forth Custodial consumers. I think the risk here is substantial and hasn't been adequately discussed. I want to schedule a meeting with my boss, whose idea this was, to discuss further. I'm not sure if the payoff for the feature we're building is necessarily worth the risk. Review the attached materials, share your thoughts. Ideantify risk mitigation strategies.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "communication_calibration_01",
+    "title": "Understanding encouraging openings in conversation",
+    "mode_expected": "exploration",
+    "tags": ["communication", "social_calibration", "reflection"],
+    "input": "Let's zoom out for a moment. This is something that you do, or some version of it, with every prompt. I find it reassuring, but now I'd like to understand the mechanics. You always say something encouraging or an indication that the user asked a good question, and so on and so forth. What's the operating principle here? I'd like to become better at using it when I speak with other people, too.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "social_overexplaining_wallpaper_01",
+    "title": "Buddy liked wallpaper, user over-explained and got no reply",
+    "mode_expected": "journal",
+    "tags": ["social", "reflection", "communication", "reputation_fear"],
+    "input": "Okay, that was excellent, thanks! Question from today's experience where I'm feeling a gap in my understanding. I know I should not have said what I said, and I somewhat suspect the reasons, but I'd like it made clear. I created a picture (attached) and sent it to my buddy as desktop wallpaper. Here's the conversation that followed Buddy i love that wallpaper stealing it now just set it as my main nice job buddy Me, 12:32 PM Yup, that's for the trip, the Navarre place that we both loved is wide open! Thanks for the kind words! The funny thing is, as I play around with creating images, I'm starting to understand some basics behind composition - angles, flow, how to convey energy through form, and so on Smartphone version [smartphone version attached in the chat] And by 'starting to understand,' I mean that the fundamentals of technically correct composition are built into the models and when I make changes, I break the flow and things look worse. Which is when I go, Ohh, so that's why it needs to be like that, got it. He never responded, which doesn't mean anything by itself. Provide your thoughts.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": true,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "nicotine_bargaining_01",
+    "title": "Would one cigar set back nicotine quitting progress",
+    "mode_expected": "coach",
+    "tags": ["habit_change", "nicotine", "health_behavior", "bargaining"],
+    "input": "Today is 3/1/26. I have stopped smoking cigarettes since 12/1/25. The first three weeks, the nicotine/smoking cravings were brutal. After three weeks, they got noticeably more manageable. During this time I smoked cigars once per week, on saturdays, for another two months. However, one time on 1/30 and 1/31, I smoked a cigar on both of those days. The following week I had some of the strongest smoking cravings since I quit cigarettes. I decided to stop smoking completely, including cigars, starting from February. I have been completely smoke-free for about 28 days now. Smoking cravings have not stopped and the past day or two they've been particularly strong. I'd love nothing more than to go and have a cigar with a Starbucks white chocolate mocha. Sit down, smoke for an hour, go back-and-forth with ChatGPT 5.2 model for a while about a project or something I'm thinking about, whatever. Question - would it be okay for me to go have a cigar in the context of my quest to become nicotine and smoking-addiction free? Reason I make a distinction between nicotine and smoking is that I'm constantly experiencing a feeling in my mouth like a tension in my lower jaw which makes me want to suck on a tobacco-containing product. So, how far back would a cigar today set me back on my quitting goals? Is there a mitigation strategy other than all-or-nothing? (and yes, that totally sounds like the ol' bargaining)",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": true,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "caregiving_tv_volume_01",
+    "title": "Managing disruptive TV volume with cognitively declining parent",
+    "mode_expected": "advisor_workplace",
+    "tags": ["caregiving", "family", "problem_solving", "boundaries"],
+    "input": "I have an old-as-time or at least old-as-the-tv problem. I live with my two older parents. My dad is 86 years old. His memory and mental acuity are showing visible decline. He has forgotten many things from his life and whatever is happening at the moment, the odds of him remembering it an hour from now are 50% at best; tomorrow - 5%. He does remember who me and my mom are, at least. He is also very cantankerous and highly prone to confrontation, even in scenarios where he is the only one who finds a way to create it. In other words, his personality can be quite shitty even after accounting for the brain degradation. It's not easy or pleasant for him to move around (although he is capable of getting himself from point a to point b, provided point b is not half a mile away). Most of the time, he's watching TV, i.e. YouTube videos. The problem is that he seems utterly incapable of regulating volume. He can either watch it on mute or at full volume, at which point he drives me crazy because his annoying shows are beating me over the head from the time he wakes up until the time he goes to sleep. Again, he doesn't seem capable of maintaining a volume that's not disruptive to everyone else - asking him to turn it down, he goes to mute completely. His bedroom and my bedroom/room are right next to each other. Keeping our respective doors closed helps, however, he (understandably) doesn't want to be in a closed room all day, every day, while I can't keep my door closed because my cat starts complaining outside (if you let the cat inside and close the door, they will always complain about being locked in - much of the time, anyway). What can I do? I feel bad about him watching his TV with the volume off, I feel bad about about closing the door to his bedroom where he may be feeling isolated, at least sometimes (other times, probably more often than not, he's content to watch and enjoy his shows), and I can't have his TV forcefully pouring down my soul, because he watches really shitty shows full of violence, violations of dignity, people yelling at each other, scenes of violation being described in the context of fictional stories, or just funny videos but with sounds which get extremely repetitive after hearing them over and over and over.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "anthropology_behavioral_modernity_01",
+    "title": "When did humans become behaviorally modern",
+    "mode_expected": "exploration",
+    "tags": ["history", "anthropology", "reasoning"],
+    "input": "My sense is that homo sapiens brain or cognition quality assumed its present form about 50,000 years ago. Is there any truth to that, meaning multiple indications that that is the case? Phrased differently, if we had to point to a moment in time where homo sapiens were anatomically identical to today, when would that be?",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "history_gap_70k_50k_01",
+    "title": "What happened between early symbolic behavior and cultural explosion",
+    "mode_expected": "exploration",
+    "tags": ["history", "anthropology", "deep_reasoning"],
+    "input": "This: 'Clear evidence by 70,000 years ago → globally explosive by 50,000 years ago' leaves an interesting gap of 20,000 intervening years. What do we have from archaeology, paleontology, and other relevant sciences about what was taking place during that time, or before it in a way that may be connected?",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": false,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "workplace_lateral_move_options_01",
+    "title": "Thinking through an internal lateral move",
+    "mode_expected": "advisor_workplace",
+    "tags": ["workplace", "career", "decision", "journal"],
+    "input": "I've been thinking that because I'm already having strong thoughts about a lateral move, that conversation is actually very likely to happen in real life. I have two ideas in mind: one is some sort of Accounting BA role, since I've been working with the accounting and audit teams for about eight months on the accounting platform migration. The other is something a little crazier, like an AI integrator role focused on context definitions, agent harnesses, and intent engineering. Help me think through how to frame the conversation around a lateral move.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": true,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  },
+  {
+    "id": "social_affirmation_mechanics_01",
+    "title": "How to preserve dignity while correcting direction",
+    "mode_expected": "exploration",
+    "tags": ["communication", "social_skill", "reasoning"],
+    "input": "When you say something like 'you're circling the real constraint' or 'you're optimizing for speed, the tradeoff is...' what's the underlying communication principle? I want to understand how to do that with humans without sounding fake or manipulative.",
+    "rubric": {
+      "must_include_core": true,
+      "must_include_script": true,
+      "must_include_two_options": false,
+      "must_include_likelihood_calibration": false,
+      "must_not_end_with_only_question": true
+    }
+  }
+]

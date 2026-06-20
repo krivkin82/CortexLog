@@ -20,6 +20,7 @@ class OllamaProvider:
         format: str | None = None,
         temperature: float | None = None,
         num_predict: int | None = None,
+        num_ctx: int | None = None,
     ) -> str:
         return ollama_client.chat(
             messages,
@@ -27,4 +28,5 @@ class OllamaProvider:
             format=format,
             temperature=temperature,
             num_predict=num_predict,
+            num_ctx=num_ctx,
         )

@@ -29,6 +29,7 @@ DEFAULT_LLM_SETTINGS: Dict[str, Any] = {
     "openai_max_tokens": 4096,
     "local_temperature": 0.7,
     "local_num_predict": 4096,
+    "local_num_ctx": 32768,
 }
 
 
@@ -83,9 +84,11 @@ def openai_chat_inference(llm: Dict[str, Any]) -> tuple[float, int]:
     return t, mt
 
 
-def local_chat_inference(llm: Dict[str, Any]) -> tuple[float, int]:
-    """Temperature and num_predict for Ollama chat."""
+def local_chat_inference(llm: Dict[str, Any]) -> tuple[float, int, int]:
+    """Temperature, num_predict, and num_ctx for Ollama chat."""
     t = _coerce_float(llm.get("local_temperature"), 0.7)
     npred = _coerce_int(llm.get("local_num_predict"), 4096)
+    nctx = _coerce_int(llm.get("local_num_ctx"), 32768)
     npred = max(128, min(npred, 32768))
-    return t, npred
+    nctx = max(1024, min(nctx, 262144))
+    return t, npred, nctx

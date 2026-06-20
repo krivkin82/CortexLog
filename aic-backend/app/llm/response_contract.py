@@ -1,4 +1,4 @@
-"""Response contract orchestrator: classify, validate contract, generate, validate response, retry."""
+"""LEGACY: response contract orchestrator retained for reference/testing, not active generation."""
 
 from __future__ import annotations
 
@@ -132,6 +132,25 @@ _PRAGMATIC_SHAPES = frozenset({
     "debugging_guidance",
     "decision_memo",
 })
+
+_JOURNAL_TASK_SHAPES = frozenset({
+    "options_with_tradeoffs",
+    "step_by_step_plan",
+    "implementation_recommendation",
+    "decision_memo",
+})
+
+_SUMMARY_TEMPLATE_LABELS = (
+    "quick read",
+    "option 1",
+    "option 2",
+    "option a",
+    "option b",
+    "recommendation",
+    "upside",
+    "downside",
+    "goal in one line",
+)
 
 SAFETY_BLOCK = """
 Role: Be a thoughtful, grounded AI journal companion and advisor. Use normal human reasoning, practical judgment, and the model's training to help the user think clearly, reflect, plan, analyze situations, and explore decisions.
@@ -713,22 +732,187 @@ def repair_contract_from_user_ask(
     return ResponseContract(**data)
 
 
-def load_recent_context(session_id: str | None, limit: int = 8) -> str:
-    if not session_id:
-        return ""
-    history = list_chat_messages(session_id=session_id)
+def _message_text(m: dict) -> str:
+    return (m.get("content") or "").strip()
+
+
+def _recent_user_context_from_history(history: List[dict], limit: int = 8) -> str:
     lines: List[str] = []
-    for m in history[-limit:]:
-        role = m.get("role")
-        content = (m.get("content") or "").strip()
-        if role in ("user", "assistant") and content:
-            lines.append(f"{role}: {content[:800]}")
+    for m in history:
+        if m.get("role") != "user":
+            continue
+        content = _message_text(m)
+        if content:
+            lines.append(f"user: {content[:800]}")
+    return "\n".join(lines[-limit:])
+
+
+def _assistant_clean_sentences(text: str, max_sentences: int = 3) -> List[str]:
+    out: List[str] = []
+    for raw in re.split(r"[\n\r]+|(?<=[.!?])\s+", text or ""):
+        s = raw.strip(" -\t")
+        lowered = s.lower()
+        if not s:
+            continue
+        if any(lowered.startswith(label) for label in _SUMMARY_TEMPLATE_LABELS):
+            continue
+        if len(s) < 18:
+            continue
+        out.append(s)
+        if len(out) >= max_sentences:
+            break
+    return out
+
+
+def _extract_assistant_state_summary(history: List[dict], limit_turns: int = 6) -> str:
+    recs: List[str] = []
+    open_questions: List[str] = []
+    selected_options: List[str] = []
+    named_concepts: List[str] = []
+    plans: List[str] = []
+
+    assistant_turns = [m for m in history if m.get("role") == "assistant"][-limit_turns:]
+    for m in assistant_turns:
+        text = _message_text(m)
+        if not text:
+            continue
+        sentences = _assistant_clean_sentences(text, max_sentences=4)
+        for s in sentences:
+            lowered = s.lower()
+            if "?" in s and len(open_questions) < 2:
+                open_questions.append(s[:180])
+            if any(t in lowered for t in ("recommend", "suggest", "next step", "should")) and len(recs) < 2:
+                recs.append(s[:180])
+            if any(t in lowered for t in ("option 1", "option 2", "option a", "option b", "first option", "second option")) and len(selected_options) < 2:
+                selected_options.append(s[:180])
+            if any(t in lowered for t in ("plan", "step", "first,", "then ", "after ")) and len(plans) < 2:
+                plans.append(s[:180])
+
+        if len(named_concepts) < 4:
+            for token in re.findall(r"`([^`]{2,40})`|\"([^\"]{2,40})\"|([A-Za-z][A-Za-z0-9_/-]{3,40})", text):
+                candidate = next((p for p in token if p), "").strip()
+                c_lower = candidate.lower()
+                if not candidate:
+                    continue
+                if any(c_lower.startswith(label) for label in _SUMMARY_TEMPLATE_LABELS):
+                    continue
+                if c_lower in {"quick", "option", "recommendation", "upside", "downside"}:
+                    continue
+                if candidate not in named_concepts:
+                    named_concepts.append(candidate)
+                if len(named_concepts) >= 4:
+                    break
+
+    lines: List[str] = []
+    if recs:
+        lines.append("Recommendations: " + " | ".join(recs))
+    if open_questions:
+        lines.append("Open questions: " + " | ".join(open_questions))
+    if selected_options:
+        lines.append("Options discussed: " + " | ".join(selected_options))
+    if plans:
+        lines.append("Plans/steps: " + " | ".join(plans))
+    if named_concepts:
+        lines.append("Named concepts: " + ", ".join(named_concepts))
     return "\n".join(lines)
+
+
+def _is_reference_followup(user_message: str) -> bool:
+    t = _message_lower(user_message)
+    patterns = (
+        "what you said",
+        "what you suggested",
+        "like you said",
+        "as you said",
+        "as suggested",
+        "as you suggested",
+        "you suggested",
+        "let's do that",
+        "lets do that",
+        "do that",
+        "the second option",
+        "the first option",
+        "that one",
+        "that approach",
+        "that plan",
+    )
+    return any(p in t for p in patterns)
+
+
+def _asks_for_task_shaped_output(user_message: str) -> bool:
+    t = _message_lower(user_message)
+    return any(
+        p in t
+        for p in (
+            "option",
+            "compare",
+            "comparison",
+            "recommend",
+            "recommendation",
+            "which should",
+            "which one",
+            "plan",
+            "next step",
+            "what should i",
+            "how should i",
+            "how do i implement",
+            "implementation",
+            "draft wording",
+            "wording",
+            "talk track",
+        )
+    )
+
+
+def _apply_journal_guardrails(
+    contract: ResponseContract,
+    user_message: str,
+    mode_hint: str | None,
+) -> ResponseContract:
+    if (mode_hint or "").strip().lower() != "journal":
+        return contract
+    if contract.output_shape not in _JOURNAL_TASK_SHAPES:
+        return contract
+    if _asks_for_task_shaped_output(user_message):
+        return contract
+
+    data = contract.model_dump()
+    data.update(
+        {
+            "requested_action": "reflect",
+            "primary_intent": "reflection",
+            "engagement_style": "reflective",
+            "output_shape": "short_reflection",
+        }
+    )
+    data["reason"] = (
+        f"{contract.reason} Journal guardrail: current entry does not explicitly request task-shaped output."
+    ).strip()
+    return ResponseContract(**data)
+
+
+def _load_session_context(
+    session_id: str | None,
+    *,
+    user_limit: int = 8,
+) -> tuple[str, str, List[dict]]:
+    if not session_id:
+        return "", "", []
+    history = list_chat_messages(session_id=session_id)
+    user_context = _recent_user_context_from_history(history, limit=user_limit)
+    assistant_state_summary = _extract_assistant_state_summary(history)
+    user_history_messages = [
+        {"role": "user", "content": _message_text(m)}
+        for m in history
+        if m.get("role") == "user" and _message_text(m)
+    ][-12:]
+    return user_context, assistant_state_summary, user_history_messages
 
 
 def classify_response_contract(
     user_message: str,
-    recent_context: str = "",
+    recent_user_context: str = "",
+    assistant_state_summary: str = "",
     mode_hint: str | None = None,
     retrieved_context: List[str] | None = None,
 ) -> ResponseContract:
@@ -736,11 +920,23 @@ def classify_response_contract(
     if retrieved_context:
         ctx_block = "\n\nRetrieved notes (for domain hints only):\n" + "\n".join(retrieved_context[:3])[:1500]
 
-    user_prompt = f"""Recent conversation context:
-{recent_context or "(none)"}
+    assistant_ref_block = ""
+    if assistant_state_summary and _is_reference_followup(user_message):
+        assistant_ref_block = (
+            "\nAssistant-state summary (for reference resolution only):\n"
+            f"{assistant_state_summary}"
+        )
+
+    user_prompt = f"""Recent user context:
+{recent_user_context or "(none)"}
+{assistant_ref_block}
 {ctx_block}
 
 UI mode hint (weak compatibility only, may be overridden by entry content): {mode_hint or "journal"}
+
+The current user entry is authoritative.
+Use assistant-state summary only to resolve references like "that" / "what you said".
+Do not assume the next response should match prior assistant tone, format, or structure.
 
 Classifier hints (not rules):
 - "enough for today or multi-tenancy" → requested_action: decide_between_options, decision_support, options_with_tradeoffs
@@ -787,7 +983,8 @@ def _output_shape_template(output_shape: str) -> str:
 def _contract_generation_messages(
     user_message: str,
     contract: ResponseContract,
-    recent_context: str,
+    recent_user_context: str,
+    assistant_state_summary: str,
     retrieved_context: List[str] | None,
     history_messages: List[dict],
 ) -> List[dict]:
@@ -803,8 +1000,11 @@ def _contract_generation_messages(
 Retrieved context, if any:
 {retrieved_block or "(none)"}
 
-Recent conversation context:
-{recent_context or "(none)"}
+Recent user context:
+{recent_user_context or "(none)"}
+
+Assistant-state summary (semantic continuity only):
+{assistant_state_summary or "(none)"}
 
 User entry:
 {user_message}"""
@@ -832,14 +1032,16 @@ User entry:
 def generate_with_contract(
     user_message: str,
     contract: ResponseContract,
-    recent_context: str = "",
+    recent_user_context: str = "",
+    assistant_state_summary: str = "",
     retrieved_context: List[str] | None = None,
     history_messages: List[dict] | None = None,
 ) -> str:
     messages = _contract_generation_messages(
         user_message,
         contract,
-        recent_context,
+        recent_user_context,
+        assistant_state_summary,
         retrieved_context,
         history_messages or [],
     )
@@ -1014,7 +1216,8 @@ def retry_with_contract_correction(
     contract: ResponseContract,
     prior_response: str,
     validation: ResponseValidation,
-    recent_context: str = "",
+    recent_user_context: str = "",
+    assistant_state_summary: str = "",
     retrieved_context: List[str] | None = None,
     history_messages: List[dict] | None = None,
 ) -> str:
@@ -1022,37 +1225,37 @@ def retry_with_contract_correction(
     messages = _contract_generation_messages(
         user_message,
         contract,
-        recent_context,
+        recent_user_context,
+        assistant_state_summary,
         retrieved_context,
         history_messages or [],
     )
+    neutral_issue = validation.reason or "Mismatch detected."
     messages[0]["content"] = messages[0]["content"] + appendix
     messages.append(
         {
             "role": "user",
             "content": (
-                "Your previous draft did not match the contract. Rewrite now.\n\n"
-                f"Previous draft (do not repeat verbatim):\n{prior_response[:1200]}"
+                "Rewrite to match the contract.\n"
+                f"Mismatch reason: {neutral_issue}\n"
+                "Do not reuse prior response structure. Focus on contract fit and current user entry."
             ),
         }
     )
+    if validation.reason and "Empty response" in validation.reason:
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    "Minimal prior draft context (for debugging only, not style guidance):\n"
+                    f"{prior_response[:320]}"
+                ),
+            }
+        )
     try:
         return chat_completion(messages) or prior_response
     except LLMUnavailableError:
         return prior_response
-
-
-def _history_messages_for_session(session_id: str | None) -> List[dict]:
-    if not session_id:
-        return []
-    history = list_chat_messages(session_id=session_id)
-    out: List[dict] = []
-    for m in history:
-        role = m.get("role")
-        content = (m.get("content") or "").strip()
-        if role in ("user", "assistant") and content:
-            out.append({"role": role, "content": content})
-    return out[-12:]
 
 
 def response_contract_log_path() -> str:
@@ -1100,12 +1303,12 @@ def orchestrate_response(
     session_id: str | None = None,
 ) -> dict[str, Any]:
     """Classify → validate contract → repair → generate → validate response → retry once."""
-    recent_context = load_recent_context(session_id)
-    history_messages = _history_messages_for_session(session_id)
+    recent_user_context, assistant_state_summary, history_messages = _load_session_context(session_id)
 
     contract = classify_response_contract(
         user_message=user_message,
-        recent_context=recent_context,
+        recent_user_context=recent_user_context,
+        assistant_state_summary=assistant_state_summary,
         mode_hint=mode_hint,
         retrieved_context=retrieved_context,
     )
@@ -1116,11 +1319,16 @@ def orchestrate_response(
     if not contract_validation.passed:
         contract = repair_contract_from_user_ask(contract, contract_validation, user_message)
         contract_repaired = True
+    guarded_contract = _apply_journal_guardrails(contract, user_message, mode_hint)
+    if guarded_contract.model_dump() != contract.model_dump():
+        contract = guarded_contract
+        contract_repaired = True
 
     response_text = generate_with_contract(
         user_message=user_message,
         contract=contract,
-        recent_context=recent_context,
+        recent_user_context=recent_user_context,
+        assistant_state_summary=assistant_state_summary,
         retrieved_context=retrieved_context,
         history_messages=history_messages,
     )
@@ -1135,7 +1343,8 @@ def orchestrate_response(
             contract=contract,
             prior_response=response_text,
             validation=validation,
-            recent_context=recent_context,
+            recent_user_context=recent_user_context,
+            assistant_state_summary=assistant_state_summary,
             retrieved_context=retrieved_context,
             history_messages=history_messages,
         )

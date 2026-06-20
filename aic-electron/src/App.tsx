@@ -5,6 +5,7 @@ import { ModeToggle, type Mode } from "./components/ModeToggle";
 import { ModifyMode } from "./components/ModifyMode";
 import { ProviderSettings } from "./components/ProviderSettings";
 import { fetchLlmStatus, healthCheck } from "./lib/api";
+import type { CortexLogProfile } from "./vite-env";
 
 export default function App() {
   const [mode, setMode] = useState<Mode>("journal");
@@ -14,6 +15,11 @@ export default function App() {
   const [llmOk, setLlmOk] = useState<boolean | null>(null);
   const [llmLabel, setLlmLabel] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeProfile, setActiveProfile] = useState<CortexLogProfile>({
+    id: "private",
+    label: "Private",
+  });
+  const [profileEpoch, setProfileEpoch] = useState(0);
 
   const switchMode = useCallback((next: Mode) => {
     if (next === mode) return;
@@ -56,6 +62,38 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [pollStatus]);
 
+  const loadActiveProfile = useCallback(async () => {
+    if (!window.aic?.getActiveProfile) return;
+    try {
+      const profile = await window.aic.getActiveProfile();
+      setActiveProfile(profile);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const onProfileChanged = useCallback(() => {
+    setProfileEpoch((n) => n + 1);
+    void loadActiveProfile();
+    void pollStatus();
+  }, [loadActiveProfile, pollStatus]);
+
+  useEffect(() => {
+    void loadActiveProfile();
+  }, [loadActiveProfile]);
+
+  useEffect(() => {
+    const offOpenSettings = window.aic?.onOpenSettings?.(() => setSettingsOpen(true));
+    const offProfileChanged = window.aic?.onProfileChanged?.((profile) => {
+      setActiveProfile(profile);
+      onProfileChanged();
+    });
+    return () => {
+      offOpenSettings?.();
+      offProfileChanged?.();
+    };
+  }, [onProfileChanged]);
+
   const bgClass =
     mode === "journal"
       ? "bg-background"
@@ -89,6 +127,10 @@ export default function App() {
               </nav>
               <span className="hidden text-muted-foreground sm:inline">|</span>
               <div className="flex flex-wrap items-center justify-center gap-3 font-sans text-xs text-muted-foreground">
+                <span className="font-medium text-foreground/80">
+                  Profile: {activeProfile.label}
+                </span>
+                <span className="hidden text-muted-foreground sm:inline">|</span>
                 <span>
                   Backend:{" "}
                   <span className={backendOk ? "text-green-700" : "text-red-700"}>
@@ -125,10 +167,18 @@ export default function App() {
           )}
 
           {mode === "journal" && (
-            <JournalMode isFocused={isFocused} setIsFocused={setIsFocused} />
+            <JournalMode
+              key={`journal-${profileEpoch}`}
+              isFocused={isFocused}
+              setIsFocused={setIsFocused}
+            />
           )}
           {mode === "explore" && (
-            <ExploreMode isFocused={isFocused} setIsFocused={setIsFocused} />
+            <ExploreMode
+              key={`explore-${profileEpoch}`}
+              isFocused={isFocused}
+              setIsFocused={setIsFocused}
+            />
           )}
           {mode === "modify" && <ModifyMode mode={mode} switchMode={switchMode} />}
         </div>
@@ -167,6 +217,7 @@ export default function App() {
           setSettingsOpen(false);
           void pollStatus();
         }}
+        onProfileChanged={onProfileChanged}
       />
     </>
   );

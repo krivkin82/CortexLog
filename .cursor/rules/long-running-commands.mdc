@@ -1,0 +1,31 @@
+---
+description: >-
+  After ~60s stall on shell/build commands, delegate to build-monitor subagent;
+  repeat 60s wait only when cause is known-valid (e.g. AV). Do not idle 8+ minutes.
+alwaysApply: true
+---
+
+# Long-running shell commands
+
+Applies whenever the agent runs terminal commands (especially `npm run build`, `electron-builder`, PyInstaller, or other long jobs).
+
+## Stall threshold
+
+- If a command has produced **no meaningful progress** for approximately **60 seconds** (foreground wait, background job, or repeated `Await`/poll with no new output), treat it as **stalled**.
+- **Do not** keep waiting many minutes without investigating (e.g. 8+ minute idle on the same “waiting for unlock…” line).
+
+## Required response to a stall
+
+1. **Invoke the `build-monitor` subagent** (project agent: `.cursor/agents/build-monitor.md`) with:
+   - the command that is running (or was backgrounded),
+   - the terminal output file path or last ~30 lines of output,
+   - whether it is safe to kill CortexLog/Electron/node for this repo session.
+2. **Act on the report:**
+   - **Fixable cause** (stale `CortexLog`, `electron`, `aic-backend`, or agreed node/npm): stop those processes, then **retry** the command (or ask the user to close the app first).
+   - **Known-valid wait** (subagent says likely **antivirus / file lock** scanning with no stale app process): wait **at most another ~60 seconds**, re-check output; if still stuck, **invoke `build-monitor` again** before waiting further.
+3. **Never exceed ~120 seconds of blind waiting** total without at least **one** diagnostic pass via `build-monitor` (or an equivalent explicit investigation: read terminal output + process list + same checks the subagent would run).
+4. ** Safety Mindset ** The subagent should never delete files outside of the repo without user permission. Exercise caution when deleting files inside the repo. If ambiguity exists, tell the user what you want to delete, the reason for the action, and get user permission.
+
+## CortexLog-specific note
+
+`aic-electron` builds often block on `dist\*.exe` locks. First suspect: **user still has CortexLog portable exe open** or a prior **electron-builder** still running.

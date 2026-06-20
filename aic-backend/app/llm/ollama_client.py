@@ -33,6 +33,7 @@ def chat(
     *,
     temperature: float | None = None,
     num_predict: int | None = None,
+    num_ctx: int | None = None,
 ) -> str:
     """
     Call Ollama chat endpoint. messages format: [{"role": "user"|"assistant"|"system", "content": "..."}]
@@ -48,6 +49,8 @@ def chat(
         opts["temperature"] = temperature
     if num_predict is not None:
         opts["num_predict"] = num_predict
+    if num_ctx is not None:
+        opts["num_ctx"] = num_ctx
     if opts:
         kwargs["options"] = opts
     response = client.chat(**kwargs)

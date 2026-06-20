@@ -59,13 +59,14 @@ def chat_completion(
     if source == "local":
         try:
             fmt = "json" if json_output else None
-            lt, npred = local_chat_inference(llm)
+            lt, npred, nctx = local_chat_inference(llm)
             return OllamaProvider().chat(
                 messages,
                 model=effective_ollama_model(llm),
                 format=fmt,
                 temperature=temperature if temperature is not None else lt,
                 num_predict=max_tokens if max_tokens is not None else npred,
+                num_ctx=nctx,
             )
         except Exception as e:
             raise LLMUnavailableError("Local model unavailable.") from e

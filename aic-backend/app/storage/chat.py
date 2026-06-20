@@ -63,7 +63,7 @@ def list_chat_messages(limit: int = 50, session_id: Optional[str] = None) -> Lis
             SELECT id, role, content, mode, created_at, session_id
             FROM chat_messages
             WHERE session_id = ?
-            ORDER BY created_at ASC
+            ORDER BY created_at DESC
             LIMIT ?
             """,
             (session_id, limit),
@@ -73,12 +73,12 @@ def list_chat_messages(limit: int = 50, session_id: Optional[str] = None) -> Lis
             """
             SELECT id, role, content, mode, created_at, session_id
             FROM chat_messages
-            ORDER BY created_at ASC
+            ORDER BY created_at DESC
             LIMIT ?
             """,
             (limit,),
         )
-    rows = cursor.fetchall()
+    rows = list(reversed(cursor.fetchall()))
     conn.close()
     return [
         {

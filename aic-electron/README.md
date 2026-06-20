@@ -19,7 +19,7 @@ npm run renderer:build
 npm start
 ```
 
-Electron loads `renderer-dist/index.html` when present (otherwise falls back to the legacy `renderer/` shell).
+Electron loads `renderer-dist/index.html` in non-dev mode. If it is missing, the app shows an error and exits.
 
 ## Packaged app
 
