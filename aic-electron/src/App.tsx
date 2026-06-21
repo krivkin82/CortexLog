@@ -3,9 +3,23 @@ import { ExploreMode } from "./components/ExploreMode";
 import { JournalMode } from "./components/JournalMode";
 import { ModeToggle, type Mode } from "./components/ModeToggle";
 import { ModifyMode } from "./components/ModifyMode";
-import { ProviderSettings } from "./components/ProviderSettings";
+import { ProviderSettings, type SettingsTab } from "./components/ProviderSettings";
 import { fetchLlmStatus, healthCheck } from "./lib/api";
 import type { CortexLogProfile } from "./vite-env";
+
+const PREF_PERSIST_DRAFTS_KEY = "cortexlog.persist_unsent_drafts";
+const PREF_WHEEL_FONT_RESIZE_KEY = "cortexlog.enable_wheel_font_resize";
+const PREF_JOURNAL_FONT_PERCENT_KEY = "cortexlog.journal_input_font_percent";
+const PREF_EXPLORE_FONT_PERCENT_KEY = "cortexlog.explore_input_font_percent";
+const PREF_JOURNAL_ENTRY_FONT_PERCENT_KEY = "cortexlog.journal_entry_font_percent";
+const PREF_JOURNAL_RESPONSE_FONT_PERCENT_KEY = "cortexlog.journal_response_font_percent";
+
+function readFontPercent(key: string, fallback = 100): number {
+  const raw = window.localStorage.getItem(key);
+  const parsed = raw == null ? fallback : Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(140, Math.max(70, Math.round(parsed)));
+}
 
 export default function App() {
   const [mode, setMode] = useState<Mode>("journal");
@@ -15,28 +29,92 @@ export default function App() {
   const [llmOk, setLlmOk] = useState<boolean | null>(null);
   const [llmLabel, setLlmLabel] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("profile");
   const [activeProfile, setActiveProfile] = useState<CortexLogProfile>({
     id: "private",
     label: "Private",
   });
   const [profileEpoch, setProfileEpoch] = useState(0);
+  const [journalDraft, setJournalDraft] = useState("");
+  const [exploreDraft, setExploreDraft] = useState("");
+  const [journalFocusToken, setJournalFocusToken] = useState(0);
+  const [exploreFocusToken, setExploreFocusToken] = useState(0);
+  const [persistUnsentDrafts, setPersistUnsentDrafts] = useState<boolean>(() => {
+    const raw = window.localStorage.getItem(PREF_PERSIST_DRAFTS_KEY);
+    if (raw == null) return true;
+    return raw === "true";
+  });
+  const [enableWheelFontResize, setEnableWheelFontResize] = useState<boolean>(() => {
+    const raw = window.localStorage.getItem(PREF_WHEEL_FONT_RESIZE_KEY);
+    if (raw == null) return true;
+    return raw === "true";
+  });
+  const [journalInputFontPercent, setJournalInputFontPercent] = useState<number>(() =>
+    readFontPercent(PREF_JOURNAL_FONT_PERCENT_KEY, 100),
+  );
+  const [exploreInputFontPercent, setExploreInputFontPercent] = useState<number>(() =>
+    readFontPercent(PREF_EXPLORE_FONT_PERCENT_KEY, 100),
+  );
+  const [journalEntryFontPercent, setJournalEntryFontPercent] = useState<number>(() =>
+    readFontPercent(PREF_JOURNAL_ENTRY_FONT_PERCENT_KEY, 100),
+  );
+  const [journalResponseFontPercent, setJournalResponseFontPercent] = useState<number>(() =>
+    readFontPercent(PREF_JOURNAL_RESPONSE_FONT_PERCENT_KEY, 100),
+  );
 
   const switchMode = useCallback((next: Mode) => {
     if (next === mode) return;
+    if (!persistUnsentDrafts) {
+      if (mode === "journal") setJournalDraft("");
+      if (mode === "explore") setExploreDraft("");
+    }
     setIsTransitioning(true);
     window.setTimeout(() => {
       setMode(next);
       window.setTimeout(() => setIsTransitioning(false), 150);
     }, 150);
+  }, [mode, persistUnsentDrafts]);
+
+  useEffect(() => {
+    if (mode === "journal") setJournalFocusToken((n) => n + 1);
+    if (mode === "explore") setExploreFocusToken((n) => n + 1);
   }, [mode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(PREF_PERSIST_DRAFTS_KEY, String(persistUnsentDrafts));
+  }, [persistUnsentDrafts]);
+
+  useEffect(() => {
+    window.localStorage.setItem(PREF_WHEEL_FONT_RESIZE_KEY, String(enableWheelFontResize));
+  }, [enableWheelFontResize]);
+
+  useEffect(() => {
+    window.localStorage.setItem(PREF_JOURNAL_FONT_PERCENT_KEY, String(journalInputFontPercent));
+  }, [journalInputFontPercent]);
+
+  useEffect(() => {
+    window.localStorage.setItem(PREF_EXPLORE_FONT_PERCENT_KEY, String(exploreInputFontPercent));
+  }, [exploreInputFontPercent]);
+
+  useEffect(() => {
+    window.localStorage.setItem(PREF_JOURNAL_ENTRY_FONT_PERCENT_KEY, String(journalEntryFontPercent));
+  }, [journalEntryFontPercent]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      PREF_JOURNAL_RESPONSE_FONT_PERCENT_KEY,
+      String(journalResponseFontPercent),
+    );
+  }, [journalResponseFontPercent]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.shiftKey && e.key === "Tab") {
         e.preventDefault();
-        const order: Mode[] = ["journal", "explore", "modify"];
+        const order: Mode[] = ["journal", "explore"];
         const idx = order.indexOf(mode);
-        switchMode(order[(idx + 1) % order.length]);
+        const nextIdx = idx >= 0 ? (idx + 1) % order.length : 0;
+        switchMode(order[nextIdx]);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -74,6 +152,8 @@ export default function App() {
 
   const onProfileChanged = useCallback(() => {
     setProfileEpoch((n) => n + 1);
+    setJournalDraft("");
+    setExploreDraft("");
     void loadActiveProfile();
     void pollStatus();
   }, [loadActiveProfile, pollStatus]);
@@ -83,16 +163,25 @@ export default function App() {
   }, [loadActiveProfile]);
 
   useEffect(() => {
-    const offOpenSettings = window.aic?.onOpenSettings?.(() => setSettingsOpen(true));
+    const offOpenSettings = window.aic?.onOpenSettings?.((tab) => {
+      setSettingsInitialTab(tab ?? "profile");
+      setSettingsOpen(true);
+    });
+    const offSwitchMode = window.aic?.onSwitchMode?.((nextMode) => {
+      if (nextMode === "journal" || nextMode === "explore" || nextMode === "modify") {
+        switchMode(nextMode);
+      }
+    });
     const offProfileChanged = window.aic?.onProfileChanged?.((profile) => {
       setActiveProfile(profile);
       onProfileChanged();
     });
     return () => {
       offOpenSettings?.();
+      offSwitchMode?.();
       offProfileChanged?.();
     };
-  }, [onProfileChanged]);
+  }, [onProfileChanged, switchMode]);
 
   const bgClass =
     mode === "journal"
@@ -123,7 +212,12 @@ export default function App() {
           {mode !== "modify" && (
             <div className="mb-6 flex flex-wrap items-center justify-center gap-4">
               <nav className="flex items-center justify-center gap-3">
-                <ModeToggle mode={mode} onChange={switchMode} variant="center" />
+                <ModeToggle
+                  mode={mode}
+                  onChange={switchMode}
+                  variant="center"
+                  visibleModes={["journal", "explore"]}
+                />
               </nav>
               <span className="hidden text-muted-foreground sm:inline">|</span>
               <div className="flex flex-wrap items-center justify-center gap-3 font-sans text-xs text-muted-foreground">
@@ -171,6 +265,16 @@ export default function App() {
               key={`journal-${profileEpoch}`}
               isFocused={isFocused}
               setIsFocused={setIsFocused}
+              draft={journalDraft}
+              setDraft={setJournalDraft}
+              focusToken={journalFocusToken}
+              fontPercent={journalInputFontPercent}
+              onFontPercentChange={setJournalInputFontPercent}
+              wheelFontResizeEnabled={enableWheelFontResize}
+              entryFontPercent={journalEntryFontPercent}
+              onEntryFontPercentChange={setJournalEntryFontPercent}
+              responseFontPercent={journalResponseFontPercent}
+              onResponseFontPercentChange={setJournalResponseFontPercent}
             />
           )}
           {mode === "explore" && (
@@ -178,6 +282,12 @@ export default function App() {
               key={`explore-${profileEpoch}`}
               isFocused={isFocused}
               setIsFocused={setIsFocused}
+              draft={exploreDraft}
+              setDraft={setExploreDraft}
+              focusToken={exploreFocusToken}
+              fontPercent={exploreInputFontPercent}
+              onFontPercentChange={setExploreInputFontPercent}
+              wheelFontResizeEnabled={enableWheelFontResize}
             />
           )}
           {mode === "modify" && <ModifyMode mode={mode} switchMode={switchMode} />}
@@ -213,8 +323,22 @@ export default function App() {
 
       <ProviderSettings
         open={settingsOpen}
+        initialTab={settingsInitialTab}
+        persistUnsentDrafts={persistUnsentDrafts}
+        onPersistUnsentDraftsChange={setPersistUnsentDrafts}
+        enableWheelFontResize={enableWheelFontResize}
+        onEnableWheelFontResizeChange={setEnableWheelFontResize}
+        journalInputFontPercent={journalInputFontPercent}
+        onJournalInputFontPercentChange={setJournalInputFontPercent}
+        exploreInputFontPercent={exploreInputFontPercent}
+        onExploreInputFontPercentChange={setExploreInputFontPercent}
+        journalEntryFontPercent={journalEntryFontPercent}
+        onJournalEntryFontPercentChange={setJournalEntryFontPercent}
+        journalResponseFontPercent={journalResponseFontPercent}
+        onJournalResponseFontPercentChange={setJournalResponseFontPercent}
         onClose={() => {
           setSettingsOpen(false);
+          setSettingsInitialTab("profile");
           void pollStatus();
         }}
         onProfileChanged={onProfileChanged}

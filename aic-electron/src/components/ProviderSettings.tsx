@@ -4,11 +4,24 @@ import type { CortexLogProfile } from "@/vite-env";
 
 type Props = {
   open: boolean;
+  initialTab?: SettingsTab;
+  persistUnsentDrafts: boolean;
+  onPersistUnsentDraftsChange: (next: boolean) => void;
+  enableWheelFontResize: boolean;
+  onEnableWheelFontResizeChange: (next: boolean) => void;
+  journalInputFontPercent: number;
+  onJournalInputFontPercentChange: (next: number) => void;
+  exploreInputFontPercent: number;
+  onExploreInputFontPercentChange: (next: number) => void;
+  journalEntryFontPercent: number;
+  onJournalEntryFontPercentChange: (next: number) => void;
+  journalResponseFontPercent: number;
+  onJournalResponseFontPercentChange: (next: number) => void;
   onClose: () => void;
   onProfileChanged?: () => void;
 };
 
-type Tab = "profile" | "ai" | "modify" | "debug";
+export type SettingsTab = "profile" | "ai" | "modify" | "debug" | "preferences";
 
 type LlmSettings = {
   model_source?: string;
@@ -31,8 +44,25 @@ type EngineStatus = {
   message?: string;
 };
 
-export function ProviderSettings({ open, onClose, onProfileChanged }: Props) {
-  const [tab, setTab] = useState<Tab>("profile");
+export function ProviderSettings({
+  open,
+  initialTab = "profile",
+  persistUnsentDrafts,
+  onPersistUnsentDraftsChange,
+  enableWheelFontResize,
+  onEnableWheelFontResizeChange,
+  journalInputFontPercent,
+  onJournalInputFontPercentChange,
+  exploreInputFontPercent,
+  onExploreInputFontPercentChange,
+  journalEntryFontPercent,
+  onJournalEntryFontPercentChange,
+  journalResponseFontPercent,
+  onJournalResponseFontPercentChange,
+  onClose,
+  onProfileChanged,
+}: Props) {
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [profiles, setProfiles] = useState<CortexLogProfile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState("private");
   const [newProfileName, setNewProfileName] = useState("");
@@ -130,12 +160,13 @@ export function ProviderSettings({ open, onClose, onProfileChanged }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    setTab(initialTab);
     void loadProfiles();
     void loadProviders();
     void loadAi();
     void loadEngine();
     void loadDebug();
-  }, [open, loadAi, loadDebug, loadEngine, loadProfiles, loadProviders]);
+  }, [open, initialTab, loadAi, loadDebug, loadEngine, loadProfiles, loadProviders]);
 
   const refreshEngineStatus = async () => {
     const st = await apiFetch("/modify/engine/status");
@@ -408,7 +439,7 @@ export function ProviderSettings({ open, onClose, onProfileChanged }: Props) {
       aria-modal="true"
       aria-labelledby="settings-title"
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-[oklch(0.86_0.015_80)] bg-[oklch(0.9_0.02_82)]/96 p-6 shadow-xl backdrop-blur-sm">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="settings-title" className="text-lg font-semibold text-foreground">
@@ -463,6 +494,13 @@ export function ProviderSettings({ open, onClose, onProfileChanged }: Props) {
             onClick={() => setTab("debug")}
           >
             Backend debug log
+          </button>
+          <button
+            type="button"
+            className={`rounded-md px-3 py-1.5 text-sm ${tab === "preferences" ? "bg-muted font-medium" : ""}`}
+            onClick={() => setTab("preferences")}
+          >
+            Preferences
           </button>
         </div>
 
@@ -788,6 +826,172 @@ export function ProviderSettings({ open, onClose, onProfileChanged }: Props) {
               >
                 Test Modify Engine
               </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "preferences" && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Tune writing and switching behavior for Journal and Explore.
+            </p>
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+              <div>
+                <p className="font-medium text-foreground">Persist unsent drafts across mode switches</p>
+                <p className="text-xs text-muted-foreground">
+                  Keeps unsent text in both Journal and Explore until you submit it or clear it.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={persistUnsentDrafts}
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                  persistUnsentDrafts ? "bg-foreground" : "bg-muted"
+                }`}
+                onClick={() => onPersistUnsentDraftsChange(!persistUnsentDrafts)}
+              >
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-background shadow transition-transform ${
+                    persistUnsentDrafts ? "left-5" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+              <div>
+                <p className="font-medium text-foreground">Ctrl + mouse wheel adjusts input font size</p>
+                <p className="text-xs text-muted-foreground">
+                  While hovering the Journal/Explore input, hold Ctrl and scroll to resize text.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={enableWheelFontResize}
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                  enableWheelFontResize ? "bg-foreground" : "bg-muted"
+                }`}
+                onClick={() => onEnableWheelFontResizeChange(!enableWheelFontResize)}
+              >
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-background shadow transition-transform ${
+                    enableWheelFontResize ? "left-5" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Journal input font size</p>
+              <p className="mt-1 text-xs text-muted-foreground">Default is 100.</p>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={journalInputFontPercent}
+                  onChange={(e) => onJournalInputFontPercentChange(Number(e.target.value))}
+                  className="w-full"
+                />
+                <input
+                  type="number"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={journalInputFontPercent}
+                  onChange={(e) =>
+                    onJournalInputFontPercentChange(
+                      Math.min(140, Math.max(70, Number(e.target.value) || 100)),
+                    )
+                  }
+                  className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Explore input font size</p>
+              <p className="mt-1 text-xs text-muted-foreground">Default is 100.</p>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={exploreInputFontPercent}
+                  onChange={(e) => onExploreInputFontPercentChange(Number(e.target.value))}
+                  className="w-full"
+                />
+                <input
+                  type="number"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={exploreInputFontPercent}
+                  onChange={(e) =>
+                    onExploreInputFontPercentChange(
+                      Math.min(140, Math.max(70, Number(e.target.value) || 100)),
+                    )
+                  }
+                  className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Journal previous entry font size</p>
+              <p className="mt-1 text-xs text-muted-foreground">Default is 100.</p>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={journalEntryFontPercent}
+                  onChange={(e) => onJournalEntryFontPercentChange(Number(e.target.value))}
+                  className="w-full"
+                />
+                <input
+                  type="number"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={journalEntryFontPercent}
+                  onChange={(e) =>
+                    onJournalEntryFontPercentChange(
+                      Math.min(140, Math.max(70, Number(e.target.value) || 100)),
+                    )
+                  }
+                  className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Journal response font size</p>
+              <p className="mt-1 text-xs text-muted-foreground">Default is 100.</p>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={journalResponseFontPercent}
+                  onChange={(e) => onJournalResponseFontPercentChange(Number(e.target.value))}
+                  className="w-full"
+                />
+                <input
+                  type="number"
+                  min={70}
+                  max={140}
+                  step={1}
+                  value={journalResponseFontPercent}
+                  onChange={(e) =>
+                    onJournalResponseFontPercentChange(
+                      Math.min(140, Math.max(70, Number(e.target.value) || 100)),
+                    )
+                  }
+                  className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                />
+              </div>
             </div>
           </div>
         )}

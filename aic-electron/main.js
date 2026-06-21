@@ -702,9 +702,16 @@ const createWindow = () => {
   });
 };
 
-const openSettingsWindow = () => {
+const openSettingsWindow = (tab = "profile") => {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("aic:open-settings");
+    mainWindow.webContents.send("aic:open-settings", tab);
+    mainWindow.focus();
+  }
+};
+
+const openModifyMode = () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("aic:switch-mode", "modify");
     mainWindow.focus();
   }
 };
@@ -715,8 +722,17 @@ const setApplicationMenu = () => {
       label: "File",
       submenu: [
         {
-          label: "Settings",
+          label: "Modify",
+          accelerator: "CmdOrCtrl+M",
+          click: () => openModifyMode(),
+        },
+        {
+          label: "Preferences",
           accelerator: "CmdOrCtrl+,",
+          click: () => openSettingsWindow("preferences"),
+        },
+        {
+          label: "Settings",
           click: () => openSettingsWindow(),
         },
         { type: "separator" },

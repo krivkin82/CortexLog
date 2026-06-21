@@ -42,15 +42,51 @@ function formatEntryStamp(iso: string): string {
 function JournalEntryRow({
   entry,
   showReflecting = false,
+  showEntryFontIndicator,
+  showResponseFontIndicator,
+  wheelFontResizeEnabled,
+  entryFontPercent,
+  responseFontPercent,
+  onEntryFontPercentChange,
+  onResponseFontPercentChange,
 }: {
   entry: JournalEntryRow;
   showReflecting?: boolean;
+  showEntryFontIndicator: boolean;
+  showResponseFontIndicator: boolean;
+  wheelFontResizeEnabled: boolean;
+  entryFontPercent: number;
+  responseFontPercent: number;
+  onEntryFontPercentChange: (next: number) => void;
+  onResponseFontPercentChange: (next: number) => void;
 }) {
   const stamp = formatEntryStamp(entry.created_at);
+  const entryScale = entryFontPercent / 100;
+  const responseScale = responseFontPercent / 100;
+
+  const handleEntryWheel = (e: React.WheelEvent<HTMLParagraphElement>) => {
+    if (!wheelFontResizeEnabled || !e.ctrlKey) return;
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      onEntryFontPercentChange(Math.max(70, entryFontPercent - 1));
+    } else if (e.deltaY > 0) {
+      onEntryFontPercentChange(Math.min(140, entryFontPercent + 1));
+    }
+  };
+
+  const handleResponseWheel = (e: React.WheelEvent<HTMLParagraphElement>) => {
+    if (!wheelFontResizeEnabled || !e.ctrlKey) return;
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      onResponseFontPercentChange(Math.max(70, responseFontPercent - 1));
+    } else if (e.deltaY > 0) {
+      onResponseFontPercentChange(Math.min(140, responseFontPercent + 1));
+    }
+  };
 
   return (
-    <div className="flex gap-8 md:gap-12">
-      <div className="flex-1">
+    <div className="flex gap-6 md:gap-10">
+      <div className="relative basis-[55%]">
         {stamp ? (
           <time
             dateTime={entry.created_at}
@@ -59,14 +95,35 @@ function JournalEntryRow({
             {stamp}
           </time>
         ) : null}
-        <p className="whitespace-pre-wrap font-serif text-xl leading-relaxed text-foreground md:text-2xl">
+        <p
+          onWheel={handleEntryWheel}
+          className="whitespace-pre-wrap font-serif text-foreground"
+          style={{
+            fontSize: `calc(1.25rem * ${entryScale})`,
+            lineHeight: `calc(2rem * ${entryScale})`,
+          }}
+        >
           {entry.content}
         </p>
+        <div
+          className={`pointer-events-none absolute right-0 top-1 rounded-full border border-border/70 bg-background/70 px-2 py-0.5 text-[10px] font-sans tracking-wide text-muted-foreground/85 shadow-sm transition-opacity duration-500 ${
+            showEntryFontIndicator ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {entryFontPercent}
+        </div>
       </div>
-      <div className="flex-1 border-l border-muted-foreground/15 pl-8 md:pl-12">
+      <div className="relative basis-[45%] border-l border-muted-foreground/15 pl-6 md:pl-10">
         {stamp ? <div className="mb-4 h-[1.125rem]" aria-hidden /> : null}
         {entry.reflection ? (
-          <p className="whitespace-pre-wrap font-serif text-lg italic leading-relaxed text-muted-foreground/70">
+          <p
+            onWheel={handleResponseWheel}
+            className="whitespace-pre-wrap font-serif italic text-muted-foreground/70"
+            style={{
+              fontSize: `calc(1.125rem * ${responseScale})`,
+              lineHeight: `calc(2rem * ${responseScale})`,
+            }}
+          >
             {entry.reflection}
           </p>
         ) : (
@@ -74,6 +131,13 @@ function JournalEntryRow({
             {showReflecting ? "Reflecting…" : "No reflection yet."}
           </p>
         )}
+        <div
+          className={`pointer-events-none absolute right-0 top-1 rounded-full border border-border/70 bg-background/70 px-2 py-0.5 text-[10px] font-sans tracking-wide text-muted-foreground/85 shadow-sm transition-opacity duration-500 ${
+            showResponseFontIndicator ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {responseFontPercent}
+        </div>
       </div>
     </div>
   );
@@ -82,17 +146,46 @@ function JournalEntryRow({
 export function JournalMode({
   isFocused,
   setIsFocused,
+  draft,
+  setDraft,
+  focusToken,
+  fontPercent,
+  onFontPercentChange,
+  wheelFontResizeEnabled,
+  entryFontPercent,
+  onEntryFontPercentChange,
+  responseFontPercent,
+  onResponseFontPercentChange,
 }: {
   isFocused: boolean;
   setIsFocused: (v: boolean) => void;
+  draft: string;
+  setDraft: (v: string) => void;
+  focusToken: number;
+  fontPercent: number;
+  onFontPercentChange: (next: number) => void;
+  wheelFontResizeEnabled: boolean;
+  entryFontPercent: number;
+  onEntryFontPercentChange: (next: number) => void;
+  responseFontPercent: number;
+  onResponseFontPercentChange: (next: number) => void;
 }) {
-  const [journalContent, setJournalContent] = useState("");
   const [entries, setEntries] = useState<JournalEntryRow[]>([]);
   const [reflectingEntryIds, setReflectingEntryIds] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compactInput, setCompactInput] = useState(false);
+  const [showInputFontIndicator, setShowInputFontIndicator] = useState(false);
+  const [showEntryFontIndicator, setShowEntryFontIndicator] = useState(false);
+  const [showResponseFontIndicator, setShowResponseFontIndicator] = useState(false);
   const journalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const today = new Date();
+  const inputIndicatorInitialized = useRef(false);
+  const entryIndicatorInitialized = useRef(false);
+  const responseIndicatorInitialized = useRef(false);
+  const hideInputIndicatorTimer = useRef<number | null>(null);
+  const hideEntryIndicatorTimer = useRef<number | null>(null);
+  const hideResponseIndicatorTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -142,9 +235,15 @@ export function JournalMode({
     const ta = journalTextareaRef.current;
     if (!ta) return;
     const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 28;
-    const maxHeight = lineHeight * 4;
+    const compactThreshold = lineHeight * 4;
+    const maxHeight = lineHeight * (compactInput ? 6 : 4);
     ta.style.height = "auto";
     const sh = ta.scrollHeight;
+    if (!compactInput && sh > compactThreshold) {
+      setCompactInput(true);
+    } else if (compactInput && sh <= lineHeight * 3.5) {
+      setCompactInput(false);
+    }
     if (sh <= maxHeight) {
       ta.style.height = `${Math.max(sh, lineHeight)}px`;
       ta.style.overflowY = "hidden";
@@ -152,14 +251,79 @@ export function JournalMode({
       ta.style.height = `${maxHeight}px`;
       ta.style.overflowY = "auto";
     }
-  }, []);
+  }, [compactInput]);
 
   useEffect(() => {
     autoResize();
-  }, [journalContent, autoResize]);
+  }, [draft, autoResize]);
+
+  useEffect(() => {
+    if (focusToken <= 0) return;
+    const id = window.setTimeout(() => {
+      journalTextareaRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [focusToken]);
+
+  useEffect(() => {
+    if (!inputIndicatorInitialized.current) {
+      inputIndicatorInitialized.current = true;
+      return;
+    }
+    setShowInputFontIndicator(true);
+    if (hideInputIndicatorTimer.current != null) {
+      window.clearTimeout(hideInputIndicatorTimer.current);
+    }
+    hideInputIndicatorTimer.current = window.setTimeout(() => {
+      setShowInputFontIndicator(false);
+    }, 2400);
+  }, [fontPercent]);
+
+  useEffect(() => {
+    if (!entryIndicatorInitialized.current) {
+      entryIndicatorInitialized.current = true;
+      return;
+    }
+    setShowEntryFontIndicator(true);
+    if (hideEntryIndicatorTimer.current != null) {
+      window.clearTimeout(hideEntryIndicatorTimer.current);
+    }
+    hideEntryIndicatorTimer.current = window.setTimeout(() => {
+      setShowEntryFontIndicator(false);
+    }, 2400);
+  }, [entryFontPercent]);
+
+  useEffect(() => {
+    if (!responseIndicatorInitialized.current) {
+      responseIndicatorInitialized.current = true;
+      return;
+    }
+    setShowResponseFontIndicator(true);
+    if (hideResponseIndicatorTimer.current != null) {
+      window.clearTimeout(hideResponseIndicatorTimer.current);
+    }
+    hideResponseIndicatorTimer.current = window.setTimeout(() => {
+      setShowResponseFontIndicator(false);
+    }, 2400);
+  }, [responseFontPercent]);
+
+  useEffect(
+    () => () => {
+      if (hideInputIndicatorTimer.current != null) {
+        window.clearTimeout(hideInputIndicatorTimer.current);
+      }
+      if (hideEntryIndicatorTimer.current != null) {
+        window.clearTimeout(hideEntryIndicatorTimer.current);
+      }
+      if (hideResponseIndicatorTimer.current != null) {
+        window.clearTimeout(hideResponseIndicatorTimer.current);
+      }
+    },
+    [],
+  );
 
   const submitEntry = async () => {
-    const content = journalContent.trim();
+    const content = draft.trim();
     if (!content) return;
     setError(null);
     const saveRes = await apiFetch("/journal", {
@@ -174,7 +338,7 @@ export function JournalMode({
     }
     const saveData = (await saveRes.json()) as { entry?: { id: string } };
     const entryId = saveData.entry?.id;
-    setJournalContent("");
+    setDraft("");
     if (entryId) {
       setEntryReflecting(entryId, true);
     }
@@ -191,8 +355,8 @@ export function JournalMode({
     }
   };
 
-  const wordCount = journalContent.trim()
-    ? journalContent.trim().split(/\s+/).length
+  const wordCount = draft.trim()
+    ? draft.trim().split(/\s+/).length
     : 0;
 
   // Most recent entry first
@@ -232,6 +396,20 @@ export function JournalMode({
     setShowHistory((v) => !v);
   };
 
+  const handleWheel = (e: React.WheelEvent<HTMLTextAreaElement>) => {
+    if (!wheelFontResizeEnabled || !e.ctrlKey) return;
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      onFontPercentChange(Math.max(70, fontPercent - 1));
+    } else if (e.deltaY > 0) {
+      onFontPercentChange(Math.min(140, fontPercent + 1));
+    }
+  };
+
+  const baseFontRem = compactInput ? 1.125 : 1.25;
+  const baseLineHeightRem = compactInput ? 2 : 2.25;
+  const scale = fontPercent / 100;
+
   return (
     <div className="relative">
       <header
@@ -254,20 +432,34 @@ export function JournalMode({
       )}
 
       {/* Input always at the top */}
-      <textarea
-        ref={journalTextareaRef}
-        value={journalContent}
-        onChange={(e) => setJournalContent(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        placeholder="Begin writing..."
-        className="scrollbar-thin w-full resize-none border-none bg-transparent font-serif text-xl leading-9 text-foreground outline-none placeholder:italic placeholder:text-muted-foreground/50 selection:bg-accent/30 md:text-2xl"
-        style={{ minHeight: "36px" }}
-        rows={1}
-        spellCheck
-        aria-label="Journal entry"
-      />
+      <div className="relative">
+        <textarea
+          ref={journalTextareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          onWheel={handleWheel}
+          placeholder="Begin writing..."
+          className="scrollbar-thin w-full resize-none border-none bg-transparent font-serif text-foreground outline-none placeholder:italic placeholder:text-muted-foreground/50 selection:bg-accent/30"
+          style={{
+            minHeight: "36px",
+            fontSize: `calc(${baseFontRem}rem * ${scale})`,
+            lineHeight: `calc(${baseLineHeightRem}rem * ${scale})`,
+          }}
+          rows={1}
+          spellCheck
+          aria-label="Journal entry"
+        />
+        <div
+          className={`pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-sans tracking-wide text-muted-foreground/85 shadow-sm transition-opacity duration-500 ${
+            showInputFontIndicator ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {fontPercent}
+        </div>
+      </div>
 
       <footer
         className={`mt-12 flex items-center justify-between gap-4 transition-opacity duration-500 ${
@@ -289,6 +481,13 @@ export function JournalMode({
           <JournalEntryRow
             entry={currentEntry}
             showReflecting={reflectingEntryIds.includes(currentEntry.id)}
+            showEntryFontIndicator={showEntryFontIndicator}
+            showResponseFontIndicator={showResponseFontIndicator}
+            wheelFontResizeEnabled={wheelFontResizeEnabled}
+            entryFontPercent={entryFontPercent}
+            responseFontPercent={responseFontPercent}
+            onEntryFontPercentChange={onEntryFontPercentChange}
+            onResponseFontPercentChange={onResponseFontPercentChange}
           />
         </div>
       )}
@@ -301,6 +500,13 @@ export function JournalMode({
               key={entry.id}
               entry={entry}
               showReflecting={reflectingEntryIds.includes(entry.id)}
+              showEntryFontIndicator={showEntryFontIndicator}
+              showResponseFontIndicator={showResponseFontIndicator}
+              wheelFontResizeEnabled={wheelFontResizeEnabled}
+              entryFontPercent={entryFontPercent}
+              responseFontPercent={responseFontPercent}
+              onEntryFontPercentChange={onEntryFontPercentChange}
+              onResponseFontPercentChange={onResponseFontPercentChange}
             />
           ))}
         </div>

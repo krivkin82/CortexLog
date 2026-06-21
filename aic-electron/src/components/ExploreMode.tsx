@@ -24,16 +24,31 @@ function getSessionId(): string {
 export function ExploreMode({
   isFocused,
   setIsFocused,
+  draft,
+  setDraft,
+  focusToken,
+  fontPercent,
+  onFontPercentChange,
+  wheelFontResizeEnabled,
 }: {
   isFocused: boolean;
   setIsFocused: (v: boolean) => void;
+  draft: string;
+  setDraft: (v: string) => void;
+  focusToken: number;
+  fontPercent: number;
+  onFontPercentChange: (next: number) => void;
+  wheelFontResizeEnabled: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [compactInput, setCompactInput] = useState(false);
+  const [showFontIndicator, setShowFontIndicator] = useState(false);
   const exploreInputRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const sessionId = useRef(getSessionId());
+  const fontIndicatorInitialized = useRef(false);
+  const hideFontIndicatorTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -59,9 +74,15 @@ export function ExploreMode({
     const ta = exploreInputRef.current;
     if (!ta) return;
     const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 28;
-    const maxHeight = lineHeight * 4;
+    const compactThreshold = lineHeight * 4;
+    const maxHeight = lineHeight * (compactInput ? 6 : 4);
     ta.style.height = "auto";
     const sh = ta.scrollHeight;
+    if (!compactInput && sh > compactThreshold) {
+      setCompactInput(true);
+    } else if (compactInput && sh <= lineHeight * 3.5) {
+      setCompactInput(false);
+    }
     if (sh <= maxHeight) {
       ta.style.height = `${Math.max(sh, lineHeight)}px`;
       ta.style.overflowY = "hidden";
@@ -69,17 +90,47 @@ export function ExploreMode({
       ta.style.height = `${maxHeight}px`;
       ta.style.overflowY = "auto";
     }
-  }, []);
+  }, [compactInput]);
 
   useEffect(() => {
     autoResize();
-  }, [input, autoResize]);
+  }, [draft, autoResize]);
+
+  useEffect(() => {
+    if (focusToken <= 0) return;
+    const id = window.setTimeout(() => {
+      exploreInputRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [focusToken]);
+
+  useEffect(() => {
+    if (!fontIndicatorInitialized.current) {
+      fontIndicatorInitialized.current = true;
+      return;
+    }
+    setShowFontIndicator(true);
+    if (hideFontIndicatorTimer.current != null) {
+      window.clearTimeout(hideFontIndicatorTimer.current);
+    }
+    hideFontIndicatorTimer.current = window.setTimeout(() => {
+      setShowFontIndicator(false);
+    }, 2400);
+  }, [fontPercent]);
+
+  useEffect(
+    () => () => {
+      if (hideFontIndicatorTimer.current != null) {
+        window.clearTimeout(hideFontIndicatorTimer.current);
+      }
+    },
+    [],
+  );
 
   const submit = async () => {
-    const text = input.trim();
+    const text = draft.trim();
     if (!text) return;
     setError(null);
-    setInput("");
     try {
       const res = await apiFetch("/chat", {
         method: "POST",
@@ -95,11 +146,26 @@ export function ExploreMode({
         setError(err.detail || "Explore unavailable.");
         return;
       }
+      setDraft("");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
     }
   };
+
+  const handleWheel = (e: React.WheelEvent<HTMLTextAreaElement>) => {
+    if (!wheelFontResizeEnabled || !e.ctrlKey) return;
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      onFontPercentChange(Math.max(70, fontPercent - 1));
+    } else if (e.deltaY > 0) {
+      onFontPercentChange(Math.min(140, fontPercent + 1));
+    }
+  };
+
+  const baseFontRem = compactInput ? 1 : 1.125;
+  const baseLineHeightRem = 1.75;
+  const scale = fontPercent / 100;
 
   return (
     <div className="flex min-h-[70vh] flex-col">
@@ -145,24 +211,38 @@ export function ExploreMode({
           void submit();
         }}
       >
-        <textarea
-          ref={exploreInputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void submit();
-            }
-          }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder="Type something..."
-          className="scrollbar-thin w-full resize-none rounded-lg border-none bg-[oklch(0.99_0.005_260)] px-4 py-3 font-sans text-lg leading-7 text-[oklch(0.25_0.02_260)] shadow-sm outline-none transition-shadow duration-300 placeholder:text-[oklch(0.6_0.02_260)] focus:shadow-md focus:ring-2 focus:ring-[oklch(0.7_0.1_280)]/30"
-          style={{ minHeight: "52px" }}
-          rows={1}
-          aria-label="Explore input"
-        />
+        <div className="relative">
+          <textarea
+            ref={exploreInputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void submit();
+              }
+            }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            onWheel={handleWheel}
+            placeholder="Type something..."
+            className="scrollbar-thin w-full resize-none rounded-lg border-none bg-[oklch(0.99_0.005_260)] px-4 py-3 font-sans text-[oklch(0.25_0.02_260)] shadow-sm outline-none transition-shadow duration-300 placeholder:text-[oklch(0.6_0.02_260)] focus:shadow-md focus:ring-2 focus:ring-[oklch(0.7_0.1_280)]/30"
+            style={{
+              minHeight: "52px",
+              fontSize: `calc(${baseFontRem}rem * ${scale})`,
+              lineHeight: `calc(${baseLineHeightRem}rem * ${scale})`,
+            }}
+            rows={1}
+            aria-label="Explore input"
+          />
+          <div
+            className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-border/70 bg-white/80 px-2.5 py-1 text-[11px] font-sans tracking-wide text-[oklch(0.5_0.02_260)] shadow-sm transition-opacity duration-500 ${
+              showFontIndicator ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {fontPercent}
+          </div>
+        </div>
       </form>
     </div>
   );

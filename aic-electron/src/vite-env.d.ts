@@ -30,7 +30,8 @@ type AicPreload = {
   switchProfile: (profileId: string) => Promise<ProfileSwitchResult>;
   sendDataDeleted: () => void;
   onDataDeleted: (fn: () => void) => () => void;
-  onOpenSettings: (fn: () => void) => () => void;
+  onOpenSettings: (fn: (tab?: "profile" | "ai" | "modify" | "debug" | "preferences") => void) => () => void;
+  onSwitchMode: (fn: (mode: "journal" | "explore" | "modify") => void) => () => void;
   onProfileChanged: (fn: (profile: CortexLogProfile) => void) => () => void;
 };
 

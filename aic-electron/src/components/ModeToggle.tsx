@@ -4,10 +4,11 @@ type Props = {
   mode: Mode;
   onChange: (m: Mode) => void;
   variant?: "center" | "header";
+  visibleModes?: Mode[];
 };
 
-export function ModeToggle({ mode, onChange, variant = "center" }: Props) {
-  const modes: Mode[] = ["journal", "explore", "modify"];
+export function ModeToggle({ mode, onChange, variant = "center", visibleModes }: Props) {
+  const modes: Mode[] = visibleModes ?? ["journal", "explore", "modify"];
   const baseBtn =
     variant === "header"
       ? "text-sm tracking-wide transition-all duration-300 font-sans"

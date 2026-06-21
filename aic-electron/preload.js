@@ -18,9 +18,14 @@ contextBridge.exposeInMainWorld("aic", {
     return () => ipcRenderer.removeListener("aic:data-deleted", handler);
   },
   onOpenSettings: (fn) => {
-    const handler = () => fn();
+    const handler = (_event, tab) => fn(tab);
     ipcRenderer.on("aic:open-settings", handler);
     return () => ipcRenderer.removeListener("aic:open-settings", handler);
+  },
+  onSwitchMode: (fn) => {
+    const handler = (_event, mode) => fn(mode);
+    ipcRenderer.on("aic:switch-mode", handler);
+    return () => ipcRenderer.removeListener("aic:switch-mode", handler);
   },
   onProfileChanged: (fn) => {
     const handler = (_event, profile) => fn(profile);
