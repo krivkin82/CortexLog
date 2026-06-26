@@ -1,6 +1,9 @@
 import urllib.error
 import urllib.request
 import uuid
+import json
+import time
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -68,6 +71,24 @@ from app.storage.relations import delete_relation, list_relations
 
 router = APIRouter()
 JOURNAL_REFLECT_SESSION_ID = "__journal_reflect__"
+
+
+def _agent_log(run_id: str, hypothesis_id: str, location: str, message: str, data: dict) -> None:
+    try:
+        path = Path(__file__).resolve().parents[3] / "debug-eff0ce.log"
+        payload = {
+            "sessionId": "eff0ce",
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except Exception:
+        pass
 
 
 def _index_journal_entry(entry_id: str, content: str) -> str:
@@ -361,29 +382,40 @@ def journal_reflect(request: JournalReflectRequest | None = None) -> dict:
     entry_item = get_item_by_path(entry_id)
     exclude_ids = [entry_item["id"]] if entry_item else []
     retrieval_result = retrieve(entry_content, limit=3, exclude_item_ids=exclude_ids)
-    retrieved_context = [m["content"] for m in retrieval_result.get("matches", [])]
+    retrieved_context = [
+        m["content"]
+        for m in retrieval_result.get("matches", [])
+        if str(m.get("content") or "").strip() != entry_content
+    ]
+    # #region agent log
+    _agent_log(
+        "pre-fix",
+        "H2,H5",
+        "app/api/routes.py:journal_reflect",
+        "journal reflection route metadata",
+        {
+            "entry_id": entry_id,
+            "entry_content_len": len(entry_content),
+            "entry_item_found": bool(entry_item),
+            "exclude_count": len(exclude_ids),
+            "retrieval_match_count": len(retrieval_result.get("matches", [])),
+            "retrieved_context_lengths": [len(str(m or "")) for m in retrieved_context],
+            "retrieval_match_item_ids": [m.get("item_id") for m in retrieval_result.get("matches", [])],
+            "retrieval_match_scores": [round(float(m.get("score") or 0), 4) for m in retrieval_result.get("matches", [])],
+            "retrieved_context_equal_current": [str(m or "").strip() == entry_content for m in retrieved_context],
+        },
+    )
+    # #endregion
     try:
-        create_chat_message(
-            role="user",
-            content=entry_content,
-            mode="journal",
-            session_id=JOURNAL_REFLECT_SESSION_ID,
-        )
         payload = generate_response(
             entry_content,
             "journal",
             retrieved_context=retrieved_context,
-            session_id=JOURNAL_REFLECT_SESSION_ID,
+            session_id=None,
         )
     except LLMUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     reflection_text = payload.get("text") or ""
-    create_chat_message(
-        role="assistant",
-        content=reflection_text,
-        mode="journal",
-        session_id=JOURNAL_REFLECT_SESSION_ID,
-    )
     update_journal_reflection(entry_id, reflection_text)
     return {"text": reflection_text, "entry_id": entry_id}
 

@@ -365,15 +365,15 @@ export function JournalMode({
   const currentEntry = sortedEntries[0] ?? null;
   const olderEntries = sortedEntries.slice(1);
   const hasOlderEntries = olderEntries.length > 0;
-  const hasJournalHistory = entries.length > 0;
-
   const historyToggleLabel = hasOlderEntries
     ? showHistory
       ? "Hide entries"
       : "See previous entries"
-    : showHistory
-      ? "Hide entry"
-      : "View last entry";
+    : currentEntry
+      ? showHistory
+        ? "Hide entry"
+        : "View last entry"
+      : "See previous entries";
 
   const scrollToCurrentEntry = () => {
     document.getElementById("journal-current-entry")?.scrollIntoView({
@@ -512,22 +512,20 @@ export function JournalMode({
         </div>
       )}
 
-      {/* Fixed bottom-left — same control, visible whenever this profile has journal history */}
-      {hasJournalHistory && (
-        <div className="fixed bottom-6 left-6 z-10">
-          <button
-            type="button"
-            onClick={handleHistoryToggle}
-            className={`font-sans text-xs tracking-wide transition-all duration-300 ${
-              isFocused
-                ? "opacity-40 hover:opacity-70"
-                : "opacity-80 hover:opacity-100"
-            } text-muted-foreground`}
-          >
-            {historyToggleLabel}
-          </button>
-        </div>
-      )}
+      {/* Fixed bottom-left — always visible for consistency from startup */}
+      <div className="fixed bottom-6 left-6 z-10">
+        <button
+          type="button"
+          onClick={handleHistoryToggle}
+          className={`font-sans text-xs tracking-wide transition-all duration-300 ${
+            isFocused
+              ? "opacity-40 hover:opacity-70"
+              : "opacity-80 hover:opacity-100"
+          } text-muted-foreground`}
+        >
+          {historyToggleLabel}
+        </button>
+      </div>
     </div>
   );
 }

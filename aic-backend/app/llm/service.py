@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import time
+from pathlib import Path
 from typing import Any, List, Optional
 
 from app.llm.llm_settings import (
@@ -20,6 +23,24 @@ from app.security.secret_store import get_secret
 
 class LLMUnavailableError(Exception):
     """Raised when the configured LLM cannot produce a response."""
+
+
+def _agent_log(run_id: str, hypothesis_id: str, location: str, message: str, data: dict[str, Any]) -> None:
+    try:
+        path = Path(__file__).resolve().parents[3] / "debug-eff0ce.log"
+        payload = {
+            "sessionId": "eff0ce",
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except Exception:
+        pass
 
 
 def _get_openai_key(passphrase: str) -> Optional[str]:
@@ -55,6 +76,28 @@ def chat_completion(
     llm = get_llm_settings_dict()
     passphrase = get_machine_passphrase()
     source = llm.get("model_source") or "local"
+
+    # #region agent log
+    _agent_log(
+        "pre-fix",
+        "H3",
+        "app/llm/service.py:chat_completion",
+        "llm dispatch metadata",
+        {
+            "source": source,
+            "runtime_label": resolve_runtime_label(),
+            "message_count": len(messages),
+            "json_output": json_output,
+            "temperature_override": temperature,
+            "max_tokens_override": max_tokens,
+            "local_model": effective_ollama_model(llm),
+            "cloud_provider": llm.get("cloud_provider"),
+            "cloud_model": llm.get("cloud_model"),
+            "local_inference": local_chat_inference(llm),
+            "openai_inference": openai_chat_inference(llm),
+        },
+    )
+    # #endregion
 
     if source == "local":
         try:

@@ -303,6 +303,32 @@ export function ProviderSettings({
     setBusy(false);
   };
 
+  const saveAiSelection = async (overrides: {
+    modelSource?: "cloud" | "local";
+    cloudProvider?: string;
+    cloudModel?: string;
+    localModel?: string;
+  }) => {
+    try {
+      const nextModelSource = overrides.modelSource ?? modelSource;
+      const nextCloudProvider = overrides.cloudProvider ?? cloudProvider;
+      const nextCloudModel = overrides.cloudModel ?? cloudModel;
+      const nextLocalModel = overrides.localModel ?? localModel;
+      await apiFetch("/llm/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model_source: nextModelSource,
+          cloud_provider: nextCloudProvider,
+          cloud_model: nextCloudModel,
+          local_model: nextLocalModel.trim() || undefined,
+        }),
+      });
+    } catch {
+      /* keep explicit Save AI settings as the visible recovery path */
+    }
+  };
+
   const testAi = async () => {
     setBusy(true);
     setStatus(null);
@@ -584,7 +610,11 @@ export function ProviderSettings({
               <select
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 value={modelSource}
-                onChange={(e) => setModelSource(e.target.value as "cloud" | "local")}
+                onChange={(e) => {
+                  const next = e.target.value as "cloud" | "local";
+                  setModelSource(next);
+                  void saveAiSelection({ modelSource: next });
+                }}
               >
                 <option value="cloud">Cloud AI</option>
                 <option value="local">Local model (Ollama)</option>
@@ -600,7 +630,11 @@ export function ProviderSettings({
                   <select
                     className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                     value={cloudProvider}
-                    onChange={(e) => setCloudProvider(e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setCloudProvider(next);
+                      void saveAiSelection({ cloudProvider: next });
+                    }}
                   >
                     <option value="openai">OpenAI</option>
                   </select>
@@ -620,6 +654,7 @@ export function ProviderSettings({
                     className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                     value={cloudModel}
                     onChange={(e) => setCloudModel(e.target.value)}
+                    onBlur={() => void saveAiSelection({ cloudModel })}
                     placeholder="gpt-4o-mini"
                     disabled={cloudProvider !== "openai"}
                   />
@@ -658,6 +693,7 @@ export function ProviderSettings({
                   className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                   value={localModel}
                   onChange={(e) => setLocalModel(e.target.value)}
+                  onBlur={() => void saveAiSelection({ localModel })}
                   placeholder="Leave blank to use server default"
                 />
               </div>

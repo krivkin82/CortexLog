@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import time
+from pathlib import Path
 from typing import Any, Dict, List
 
 from app.llm.service import chat_completion
@@ -21,8 +24,35 @@ Guidelines:
 """.strip()
 
 
+def _agent_log(run_id: str, hypothesis_id: str, location: str, message: str, data: dict[str, Any]) -> None:
+    try:
+        path = Path(__file__).resolve().parents[3] / "debug-eff0ce.log"
+        payload = {
+            "sessionId": "eff0ce",
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except Exception:
+        pass
+
+
 def _mode_prompt(mode: str) -> str:
     m = (mode or "").strip().lower()
+    if m == "journal":
+        return (
+            "You are CortexLog, an AI journal companion responding to the user's journal entry.\n"
+            "Respond as an outside reader, not as the user. Do not continue the entry in first person. "
+            "Do not write as if you experienced the user's day, feelings, memories, or choices.\n"
+            "Keep the response grounded, proportionate, and conversational. Avoid grandiose praise, "
+            "diagnosis, inflated interpretations, or dramatic reframing unless the user clearly asks for that.\n"
+            "If useful, reflect back one or two concrete observations from the entry and offer a modest next thought."
+        )
     if m == "crisis":
         return (
             f"{SAFETY_BLOCK}\n\n"
@@ -106,5 +136,68 @@ def generate_response(
         if not duplicate_last_user:
             messages.append({"role": "user", "content": current})
 
+    # #region agent log
+    assistant_history = [m for m in history if m.get("role") == "assistant"]
+    marker_terms = [
+        "magnificent",
+        "profound",
+        "architecture map",
+        "perfect portrait",
+        "deep satisfaction",
+        "integrated contentment",
+    ]
+    marker_counts = {
+        term: sum(1 for m in assistant_history if term in (m.get("content") or "").lower())
+        for term in marker_terms
+    }
+    _agent_log(
+        "pre-fix",
+        "H1,H4,H5",
+        "app/llm/response.py:generate_response",
+        "assembled reflection prompt metadata",
+        {
+            "mode": mode,
+            "session_id": session_id,
+            "system_present": bool(system),
+            "context_present": bool(context_msg),
+            "history_count": len(history),
+            "assistant_history_count": len(assistant_history),
+            "message_count": len(messages),
+            "roles": [m.get("role") for m in messages],
+            "message_lengths": [len(str(m.get("content") or "")) for m in messages],
+            "duplicate_last_user": duplicate_last_user if current else False,
+            "assistant_history_style_markers": marker_counts,
+        },
+    )
+    # #endregion
+
     text = chat_completion(messages) or ""
+    # #region agent log
+    lower_text = text.lower()
+    _agent_log(
+        "pre-fix-2",
+        "H6,H7,H8,H9",
+        "app/llm/response.py:generate_response:output",
+        "model output style metadata",
+        {
+            "mode": mode,
+            "session_id": session_id,
+            "output_len": len(text),
+            "starts_with_i": lower_text.lstrip().startswith("i "),
+            "first_person_count": sum(
+                lower_text.count(term)
+                for term in [" i ", " i'm", " i've", " my ", " me ", " we ", " our "]
+            ),
+            "second_person_count": sum(
+                lower_text.count(term)
+                for term in [" you ", " your ", " you're", " you've", " yourself"]
+            ),
+            "journal_role_words": {
+                "journal": lower_text.count("journal"),
+                "entry": lower_text.count("entry"),
+                "reflection": lower_text.count("reflection"),
+            },
+        },
+    )
+    # #endregion
     return {"text": text}

@@ -162,14 +162,25 @@ function notifyProfileChanged() {
   }
 }
 
-function killOwnedBackend() {
-  if (backendProcess && !backendProcess.killed) {
-    try {
-      backendProcess.kill();
-    } catch (_) {
-      /* ignore */
+function killProcessTree(proc) {
+  if (!proc || proc.killed || !proc.pid) return;
+  try {
+    if (process.platform === "win32") {
+      execSync(`taskkill /PID ${proc.pid} /T /F`, { stdio: "ignore", windowsHide: true });
+      return;
     }
+  } catch (_) {
+    /* fallback to direct kill below */
   }
+  try {
+    proc.kill();
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function killOwnedBackend() {
+  killProcessTree(backendProcess);
   backendProcess = null;
   backendStartedByApp = false;
 }
@@ -700,6 +711,13 @@ const createWindow = () => {
       mainWindow.setBounds(display.workArea);
     }
   });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
+  });
 };
 
 const openSettingsWindow = (tab = "profile") => {
@@ -783,10 +801,12 @@ app.whenReady().then(() => {
   });
 });
 
+app.on("before-quit", () => {
+  killOwnedBackend();
+});
+
 app.on("window-all-closed", () => {
-  if (backendProcess) {
-    backendProcess.kill();
-  }
+  killOwnedBackend();
   if (process.platform !== "darwin") {
     app.quit();
   }

@@ -92,6 +92,20 @@ Also see:
   - `GET /llm/status` — `model_source`, `openai_key_configured`, `ollama_reachable`, `active_label`
   - `POST /llm/test` with the same source you use in the app
 
+#### AI model/source appears to revert after app restart
+- **Likely causes**
+  - Model source/model was changed in Settings but **Save AI settings** was not clicked before restart
+  - Running a stale packaged backend/app instead of the current dev source
+  - Active profile differs from the profile whose `cortexlog_llm` row you inspected
+- **Where to look**
+  - UI persistence: `aic-electron/src/components/ProviderSettings.tsx` (`loadAi`, `saveAiSelection`, `saveAi`)
+  - Backend persistence: `aic-backend/app/llm/llm_settings.py`, `aic-backend/app/api/llm_routes.py`
+  - Profile DB: `%APPDATA%\CortexLog\profiles\<profile>\data\aic.db`, `settings.key = cortexlog_llm`
+- **Quick checks**
+  - `GET /llm/settings` should return the expected `model_source` and `local_model` / `cloud_model`
+  - Inspect `app_settings.json` for active profile id
+  - Inspect the active profile SQLite `settings` row for `cortexlog_llm`
+
 #### “LLM unavailable. Is Ollama running?” (legacy UI copy)
 - **Likely causes**
   - Same as above; older routes may still say “Ollama” while the backend now supports **cloud or local** via `cortexlog_llm`.

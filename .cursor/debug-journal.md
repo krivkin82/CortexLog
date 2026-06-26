@@ -149,4 +149,34 @@ Use this file to record what you do and discover during debugging so the next se
 
 ---
 
+## Session: AI model/source appears to revert after restart (2026-06-21)
+
+### User report
+- After completely restarting the app, selected AI model/source appeared to revert to cloud/OpenAI (`gpt-4o-mini`-style default) instead of staying on the last-used local model.
+
+### Evidence
+- Active profile in `%APPDATA%\CortexLog\app_settings.json`: `demo`.
+- Both `private` and `demo` profile DBs had `settings.key = cortexlog_llm` persisted as:
+  - `model_source: "local"`
+  - `local_model: "gemma4"`
+  - `cloud_model: "gpt-4o-mini"`
+- Live backend `GET /llm/settings` also returned `model_source: "local"` and `local_model: "gemma4"`.
+- Backend defaults in `aic-backend/app/llm/llm_settings.py` are already local-first (`model_source: "local"`).
+
+### Root cause
+- The most likely UX trap was that changing the Settings model source/model field did not persist immediately. It only became durable after clicking **Save AI settings**. A user could change/test a model selection and then restart, seeing the last saved value rather than the last selected value.
+
+### Fixes applied
+1. Added `saveAiSelection()` in `aic-electron/src/components/ProviderSettings.tsx`.
+2. Model source/provider dropdown changes now persist immediately to `/llm/settings`.
+3. Cloud/local model text fields now persist on blur.
+4. Kept **Save AI settings** as the explicit recovery path and for API-key updates.
+
+### Verification
+- `npx tsc --noEmit` passed.
+- Lint diagnostics: no errors in `ProviderSettings.tsx`.
+- Runtime DB/API evidence before the fix confirmed current backend source persisted local settings correctly.
+
+---
+
 *Next session: append a new "Session: ..." section with date and topic, and update open/follow-up as needed.*
